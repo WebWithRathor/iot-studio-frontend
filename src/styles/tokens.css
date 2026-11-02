@@ -1,0 +1,135 @@
+/* =========================================================================
+   Plans & tokens, admin plans page, and the widgets added in 1.1.
+   Uses the design tokens from app.css (imported first).
+   ========================================================================= */
+
+/* ------------------------------------------------------------ token pill */
+.token-pill { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-family: var(--f-mono); font-size: 11.5px; letter-spacing: 0.04em; cursor: pointer; white-space: nowrap; clip-path: polygon(0 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%); }
+.token-pill:hover { border-color: var(--primary); }
+.token-pill svg:first-child { color: var(--primary-text); }
+.token-pill-num { font-weight: 700; font-variant-numeric: tabular-nums; }
+.token-pill-unit { color: var(--muted); text-transform: uppercase; font-size: 10px; letter-spacing: 0.08em; }
+.token-pill-crown { color: var(--accent-amber); }
+.token-pill.is-low { border-color: var(--warn); }
+.token-pill.is-low svg:first-child { color: var(--warn); }
+.token-pill.is-out { border-color: var(--bad); background: var(--bad-soft); }
+.token-pill.is-out svg:first-child { color: var(--bad); }
+@media (max-width: 560px) { .token-pill-unit { display: none; } }
+.editor-bar-left .token-pill { margin-left: 4px; }
+@media (max-width: 760px) { .editor-bar-left .token-pill { display: none; } }
+
+/* Menus render in a portal on <body> (see Menu in ui.tsx): above the dock (45) and dialogs (100), below toasts (200). */
+.menu-pop.is-floating { position: fixed; right: auto; z-index: 150; max-height: calc(100vh - 16px); overflow-y: auto; box-shadow: var(--shadow); animation: menu-in 0.1s ease-out; }
+.menu-pop.is-floating.is-above { transform-origin: bottom; }
+@keyframes menu-in { from { opacity: 0; transform: translateY(-3px); } }
+.menu-pop.is-floating.is-above { animation-name: menu-in-up; }
+@keyframes menu-in-up { from { opacity: 0; transform: translateY(3px); } }
+
+/* The dock gained "Plan" (and "Admin" for admins): on phones show icons, plus the label of the active page only. */
+.dock { max-width: calc(100vw - 24px); }
+@media (max-width: 520px) {
+  .dock-link { padding: 10px 12px; }
+  .dock-link:not(.is-active) span { display: none; }
+}
+
+.plan-badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 7px; font-family: var(--f-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.1em; border: 1px solid var(--line-strong); color: var(--ink); vertical-align: middle; }
+.plan-badge.is-premium { background: var(--lime); color: var(--lime-ink); border-color: var(--lime); }
+.plan-badge.is-plus { background: var(--primary); color: var(--primary-ink); border-color: var(--primary); }
+.plan-costs { display: grid; }
+
+/* ------------------------------------------------------------ payments */
+.test-checkout-banner { display: flex; align-items: flex-start; gap: 8px; padding: 10px 12px; background: var(--warn-soft); color: var(--warn); border: 1px solid var(--warn); font-size: 13px; }
+.test-checkout-banner svg { flex: none; margin-top: 2px; }
+.test-checkout-banner.is-page { color: var(--ink); }
+.test-checkout-banner.is-page svg { color: var(--warn); }
+.pay-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 860px) { .pay-top { grid-template-columns: 1fr; } }
+.pay-plan { display: flex; align-items: center; gap: 10px; }
+.pay-product { padding: 22px; gap: 12px; }
+.pay-tokens { font-family: var(--f-display); font-size: 44px; margin: 0; font-weight: 600; line-height: 1; font-variant-numeric: tabular-nums; }
+.pay-tokens small { font-family: var(--f-mono); font-size: 14px; letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.7; }
+.pay-price { font-family: var(--f-display); font-size: 28px; font-weight: 600; color: var(--lime); }
+.pay-price small { font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.06em; color: var(--night-ink); opacity: 0.6; font-weight: 400; }
+.pay-secure { margin: 0; display: flex; gap: 6px; align-items: center; font-size: 12px; opacity: 0.75; }
+.pay-ref { font-size: 11px; overflow-wrap: anywhere; }
+.pay-receipt { display: flex; gap: 12px; align-items: center; padding: 12px; background: var(--ok-soft); color: var(--ok); }
+.pay-receipt div { display: grid; gap: 2px; color: var(--ink); }
+
+.user-card-badges { display: inline-flex; gap: 6px; flex-wrap: wrap; }
+
+/* ------------------------------------------------------------ meter */
+.token-meter { display: grid; gap: 6px; min-width: 0; }
+.token-meter-row { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; font-family: var(--f-mono); font-size: 11.5px; }
+.token-meter-label { display: inline-flex; align-items: center; gap: 5px; font-weight: 700; color: var(--ink); }
+.token-meter-label svg { color: var(--primary-text); }
+.token-meter-of { color: var(--muted); font-variant-numeric: tabular-nums; }
+.token-meter-track { position: relative; height: 10px; background: var(--surface-2); border: 1px solid var(--line); overflow: hidden; }
+.token-meter-fill { position: absolute; inset: 0 auto 0 0; background: var(--primary); transition: width 0.35s ease-out; }
+.token-meter-pending { position: absolute; top: 0; bottom: 0; background: repeating-linear-gradient(-45deg, var(--warn) 0 4px, transparent 4px 8px); opacity: 0.8; transition: width 0.2s, left 0.35s; }
+.token-meter.is-low .token-meter-fill { background: var(--warn); }
+.token-meter.is-out .token-meter-fill { background: var(--bad); }
+.token-meter.is-compact .token-meter-track { height: 6px; }
+.token-meter.is-compact .token-meter-row { font-size: 10.5px; }
+
+/* ------------------------------------------------------------ library costs */
+.cost-tag { display: inline-flex; align-items: center; gap: 3px; flex: none; padding: 1px 5px; font-family: var(--f-mono); font-size: 10px; font-weight: 600; color: var(--primary-text); background: var(--primary-soft); font-variant-numeric: tabular-nums; }
+.cost-tag.is-free { color: var(--ok); background: var(--ok-soft); }
+.cost-tag.is-blocked { color: var(--bad); background: var(--bad-soft); }
+.lib-tokens { padding: 2px 14px 6px; display: grid; gap: 6px; }
+.lib-tokens-note { margin: 0; font-size: 12px; color: var(--bad); display: flex; align-items: center; gap: 5px; flex-wrap: wrap; }
+.lib-item.is-locked { cursor: not-allowed; }
+.lib-item.is-locked .lib-icon, .lib-item.is-locked .lib-text { opacity: 0.5; }
+
+/* ------------------------------------------------------------ plan page */
+.plan-top { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr); gap: 16px; align-items: start; }
+@media (max-width: 900px) { .plan-top { grid-template-columns: 1fr; } }
+.plan-current .panel-card-title { display: flex; align-items: center; gap: 10px; }
+.plan-big { display: grid; justify-items: end; }
+.plan-big strong { font-family: var(--f-display); font-size: 40px; line-height: 1; font-weight: 600; font-variant-numeric: tabular-nums; }
+.plan-big span { font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.1em; text-transform: uppercase; color: var(--primary-text); }
+.redeem-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 10px; align-items: end; }
+@media (max-width: 480px) { .redeem-form { grid-template-columns: 1fr; } }
+.plan-compare { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+@media (max-width: 1000px) { .plan-compare { grid-template-columns: 1fr; } }
+.plan-card { padding: 20px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.plan-card-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.plan-card h3 { font-family: var(--f-display); font-size: 34px; margin: 0; font-weight: 600; font-variant-numeric: tabular-nums; }
+.plan-card h3 small { font-size: 14px; font-family: var(--f-mono); letter-spacing: 0.08em; text-transform: uppercase; opacity: 0.7; }
+.plan-card.is-current.cut-card { --bc: var(--primary); --bw: 1.5px; }
+.plan-card-sub { opacity: 0.8; }
+.plan-list { list-style: none; margin: 4px 0 0; padding: 0; display: grid; gap: 8px; font-size: 14px; }
+.plan-list li { display: flex; gap: 8px; align-items: flex-start; }
+.plan-list svg { color: var(--ok); margin-top: 3px; flex: none; }
+.cut-frame-dark .plan-list svg { color: var(--lime); }
+.cost-table td:last-child { text-align: right; font-family: var(--f-mono); font-weight: 700; white-space: nowrap; }
+
+/* ------------------------------------------------------------ admin */
+.admin-search { display: flex; align-items: center; gap: 8px; border: 1px solid var(--line); padding: 4px 4px 4px 10px; color: var(--muted); }
+.admin-search:focus-within { border-color: var(--primary); box-shadow: var(--focus); }
+.admin-bonus { width: 110px; }
+.admin-kits { display: grid; gap: 16px; }
+.admin-kit-form { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; }
+@media (max-width: 800px) { .admin-kit-form { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+.kit-fresh { border: 1.5px dashed var(--primary); background: var(--primary-soft); padding: 12px; display: grid; gap: 8px; }
+.kit-fresh-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.kit-fresh-list { margin: 0; font-family: var(--f-mono); font-size: 14px; letter-spacing: 0.06em; white-space: pre-wrap; user-select: all; color: var(--ink); }
+
+/* ------------------------------------------------------------ widgets 1.1 */
+.w-modes { --wc: var(--primary); display: flex; gap: 6px; height: 100%; align-items: center; justify-content: center; flex-wrap: wrap; align-content: center; }
+.w-modes.is-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(70px, 1fr)); }
+.w-mode { flex: 1 1 0; min-width: 0; min-height: 40px; padding: 8px 4px; border: 1.5px solid var(--line-strong); background: var(--surface); color: var(--ink); font-family: var(--f-mono); font-weight: 700; font-size: 11px; letter-spacing: 0.02em; text-transform: uppercase; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; transition: background 0.15s, color 0.15s, border-color 0.15s; }
+.w-mode:hover:not(:disabled):not(.is-on) { background: var(--surface-2); }
+.w-mode.is-on { background: var(--wc); border-color: var(--wc); color: #fff; }
+.w-mode.is-pending { animation: blink 0.8s steps(2) infinite; }
+.w-mode:disabled { cursor: default; }
+.w-hold { touch-action: none; user-select: none; -webkit-user-select: none; }
+.w-hold.is-held { transform: translateY(2px); filter: brightness(1.15); box-shadow: inset 0 0 0 3px rgba(255, 255, 255, 0.35); }
+.w-level { display: grid; grid-template-columns: auto 34px 1fr; gap: 8px; height: 100%; align-items: stretch; min-height: 0; }
+.w-level-scale { display: flex; flex-direction: column; justify-content: space-between; font-family: var(--f-mono); font-size: 9.5px; color: var(--muted); text-align: right; padding: 1px 0; }
+.w-level-tank { --wc: var(--primary); position: relative; border: 1.5px solid var(--line-strong); background: var(--surface-2); overflow: hidden; }
+.w-level-fill { position: absolute; left: 0; right: 0; bottom: 0; background: linear-gradient(to top, var(--wc), color-mix(in srgb, var(--wc) 70%, white)); }
+.w-level-tank.is-warn { border-color: var(--warn); }
+.w-level-tank.is-warn .w-level-fill { background: var(--warn); }
+.w-level-line { position: absolute; left: 0; right: 0; height: 0; border-top: 1.5px dashed var(--warn); z-index: 1; }
+.w-level-read { display: flex; flex-direction: column; justify-content: center; align-items: flex-start; gap: 4px; min-width: 0; }
+.w-level-warn { font-family: var(--f-mono); font-size: 10px; font-weight: 700; letter-spacing: 0.1em; color: var(--warn); }
