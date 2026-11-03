@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { DeviceCreateModal } from '../components/DeviceCreateModal';
 import { Icon } from '../components/Icon';
-import { Badge, Button, EmptyState, FirmwareBadge, InfoTip, Kicker, PageHeader, SimTag, STATE_META, StateBadge } from '../components/ui';
+import { Badge, Button, EmptyState, FirmwareBadge, InfoTip, Kicker, More, PageHeader, SimTag, STATE_META, StateBadge } from '../components/ui';
 import { DIRECTION_META } from '../components/VariableForm';
 import { Link, Redirect } from '../lib/router';
 import { config } from '../services/config';
@@ -25,14 +25,14 @@ export function DevicesPage() {
   const rows = devices.map((d, i) => ({ d, r: rt[i] })).filter(({ d }) => filter === 'all' || (filter === 'sim' ? d.simulated : d.origin === 'lms'));
   return (
     <main className="page" id="main">
-      <PageHeader kicker="WORKSPACE" title="Devices" serif="& boards" actions={<Button variant="primary" icon="LuPlus" onClick={() => setCreateOpen(true)}>Add simulated device</Button>}>
-        Every ESP32 or BrainBoard your projects talk to. Simulated devices are run by the Kokoon server; real devices connect to the platform’s MQTT broker once an administrator registers them.
+      <PageHeader title="Your" serif="boards" actions={<Button icon="LuPlus" onClick={() => setCreateOpen(true)}>Add simulated device</Button>}>
+        Boards show up here after you flash an IoT program to them from the LMS.
       </PageHeader>
-      <div className="chips">
+      {devices.some((d) => d.simulated) && <div className="chips">
         {([['all', `All · ${devices.length}`], ['sim', `Simulated · ${devices.filter((d) => d.simulated).length}`], ['lms', `From LMS · ${devices.filter((d) => d.origin === 'lms').length}`]] as const).map(([k, l]) => (
           <button key={k} type="button" className={cn('chip', filter === k && 'is-active')} aria-pressed={filter === k} onClick={() => setFilter(k)}>{l}</button>
         ))}
-      </div>
+      </div>}
       <div className="device-grid">
         {rows.map(({ d, r }) => {
           const assoc = projects.filter((p) => p.deviceIds.includes(d.id));
@@ -40,22 +40,19 @@ export function DevicesPage() {
             <Link key={d.id} to={`/devices/${d.id}`} className="device-card cut-card">
               <div className="device-card-top">
                 <span className="device-chip-icon"><Icon name="LuCpu" size={18} /></span>
-                {d.simulated ? <SimTag /> : <Badge tone="info">FROM LMS</Badge>}
+                {d.simulated && <SimTag />}
               </div>
               <h3>{d.name}</h3>
-              <code className="device-hw">{d.hardwareId}</code>
               <StateBadge state={r?.state ?? 'waiting'} />
               <dl className="kv">
                 <div><dt>Last seen</dt><dd>{timeAgo(r?.lastSeen, now)}</dd></div>
-                <div><dt>Board</dt><dd>{d.board}</dd></div>
-                <div><dt>Firmware</dt><dd>{d.lmsProgram ? `${d.lmsProgram.name} ${d.lmsProgram.version ?? ''}` : d.firmwareVersion ?? '—'}</dd></div>
-                <div><dt>Variables</dt><dd>{d.capabilities.length} declared</dd></div>
+                <div><dt>Program</dt><dd>{d.lmsProgram ? d.lmsProgram.name : d.firmwareVersion ?? '—'}</dd></div>
                 <div><dt>Projects</dt><dd>{assoc.length ? assoc.map((p) => p.name).join(', ') : '—'}</dd></div>
               </dl>
             </Link>
           );
         })}
-        {!rows.length && <EmptyState icon="LuCpu" title="No devices here">Add a simulated device to try the full workflow.</EmptyState>}
+        {!rows.length && <EmptyState icon="LuCpu" title="No boards yet">Flash an IoT program to your board from the LMS and it appears here. No board? Add a simulated one to try things out.</EmptyState>}
       </div>
       <DeviceCreateModal open={createOpen} onClose={() => setCreateOpen(false)} />
     </main>
@@ -138,7 +135,7 @@ export function DeviceDetailPage({ deviceId }: { deviceId: string }) {
       <header className="device-head">
         <span className="device-chip-icon lg"><Icon name="LuCpu" size={26} /></span>
         <div className="project-head-main">
-          <Kicker>{device.simulated ? 'SIMULATED DEVICE' : 'DEVICE FROM LMS'}</Kicker>
+          {device.simulated && <Kicker>SIMULATED DEVICE</Kicker>}
           {renaming ? (
             <input id="dev-rename" className="input input-lg" defaultValue={device.name} autoFocus aria-label="Device name"
               onBlur={(e) => { renameDevice(device.id, e.target.value); setRenaming(false); }}
@@ -150,9 +147,8 @@ export function DeviceDetailPage({ deviceId }: { deviceId: string }) {
             </h1>
           )}
           <div className="row-gap">
-            <code className="device-hw">{device.hardwareId}</code>
             <StateBadge state={state} />
-            {device.simulated ? <SimTag /> : <Badge tone="info">FROM LMS</Badge>}
+            {device.simulated && <SimTag />}
           </div>
         </div>
       </header>
@@ -163,9 +159,9 @@ export function DeviceDetailPage({ deviceId }: { deviceId: string }) {
         <div className="notice cut-frame">
           <Icon name="LuGraduationCap" size={18} />
           <div>
-            <strong>Flashed from the LMS program “{device.lmsProgram!.name}”{device.lmsProgram!.version ? ` · ${device.lmsProgram!.version}` : ''}</strong>
+            <strong>Running your LMS program “{device.lmsProgram!.name}”</strong>
             {brokerMode === 'broker' ? (
-              <p>The board connects to the platform broker with its own credentials. It shows as online here as soon as it publishes; nothing shown here is faked for it. Change its variables by editing the blocks and flashing again.</p>
+              <p>To change what it sends, edit the blocks in the LMS and flash it again.</p>
             ) : (
               <p>This server runs in simulated MQTT mode, so real boards cannot reach it yet. Ask an administrator to switch the backend to the MQTT broker.</p>
             )}
@@ -184,57 +180,41 @@ export function DeviceDetailPage({ deviceId }: { deviceId: string }) {
 
       <div className="detail-grid">
         <section className="panel-card cut-card">
-          <Kicker>OVERVIEW</Kicker>
+          <Kicker>STATUS</Kicker>
           <dl className="kv">
             <div><dt>Connection</dt><dd><StateBadge state={state} /> <InfoTip text={STATE_META[state].help} /></dd></div>
-            <div><dt>State since</dt><dd>{rt ? timeAgo(rt.since, now) : '—'}</dd></div>
             <div><dt>Last seen</dt><dd>{timeAgo(rt?.lastSeen, now)}</dd></div>
-            <div><dt>Messages (session)</dt><dd className="tabnum">{rt?.messageCount ?? 0}</dd></div>
             <div><dt>Board</dt><dd>{device.board}</dd></div>
-            <div><dt>Firmware / program</dt><dd>{device.lmsProgram ? `${device.lmsProgram.name}${device.lmsProgram.version ? ` · ${device.lmsProgram.version}` : ''}` : device.firmwareVersion}</dd></div>
-            <div><dt>Origin</dt><dd>{flashedFromLms ? 'Flashed from the Kokoon LMS' : device.origin === 'lms' ? 'Discovered from LMS (mock)' : 'Registered in IoT Studio'}</dd></div>
-            <div><dt>Registered</dt><dd>{new Date(device.createdAt).toLocaleDateString()}</dd></div>
+            <div><dt>Program</dt><dd>{device.lmsProgram ? device.lmsProgram.name : device.firmwareVersion}</dd></div>
           </dl>
         </section>
 
         <section className="panel-card cut-card">
-          <Kicker>CONNECTION DETAILS</Kicker>
-          <dl className="kv">
-            <div><dt>Broker</dt><dd>{device.simulated ? 'Kokoon server simulator' : brokerMode === 'broker' ? 'Platform MQTT broker' : 'Not connected (server in simulated mode)'}</dd></div>
-            <div><dt>Client ID</dt><dd><code>{device.hardwareId}</code></dd></div>
-            <div><dt>Topic prefix</dt><dd><code className="wrap">{device.topicPrefix}/#</code></dd></div>
-            <div><dt>Availability (LWT)</dt><dd><code className="wrap">{topics.availability(device.topicPrefix)}</code></dd></div>
-            <div><dt>Credentials</dt><dd className="muted">Never shown in the browser. <InfoTip text={flashedFromLms ? 'Issued to the LMS when the board was flashed and built into its firmware. They only allow this device’s own topics.' : 'Knowing a device ID or topic never grants access.'} /></dd></div>
-            <div><dt>TLS</dt><dd className="muted">Required for the real broker</dd></div>
-          </dl>
-        </section>
-
-        <section className="panel-card cut-card">
-          <Kicker>LATEST TELEMETRY</Kicker>
+          <Kicker>LATEST VALUES</Kicker>
           <ul className="tele-list">
             {device.capabilities.map((c) => {
               const t = c.direction !== 'command' ? topics.telemetry(device.topicPrefix, c.key) : topics.command(device.topicPrefix, c.key);
               const e = values[t];
               return (
                 <li key={c.key}>
-                  <span className="tele-key"><span className="dir-mini" title={DIRECTION_META[c.direction].label}>{DIRECTION_META[c.direction].arrow}</span><code>{c.key}</code></span>
+                  <span className="tele-key"><span className="dir-mini" title={DIRECTION_META[c.direction].label}>{DIRECTION_META[c.direction].arrow}</span>{c.displayName}</span>
                   <span className="tele-val">
                     {e ? (
                       <>
                         {c.dataType === 'color' && typeof e.value === 'string' && <span className="w-swatch xs" style={{ background: e.value }} />}
                         <strong>{formatValue(e.value, c.dataType)}</strong> {c.unit ?? ''} <small>{timeAgo(e.at, now)}</small>
                       </>
-                    ) : <span className="muted">{c.direction === 'command' ? 'command only' : 'no data'}</span>}
+                    ) : <span className="muted">{c.direction === 'command' ? 'you control this' : 'no data yet'}</span>}
                   </span>
                 </li>
               );
             })}
+            {!device.capabilities.length && <li className="muted">This program doesn’t share any values yet.</li>}
           </ul>
         </section>
 
-        <section className="panel-card cut-card">
-          <Kicker>PROJECT ASSOCIATIONS</Kicker>
-          <p className="muted small">One device record, shared by any number of projects.</p>
+        <section className="panel-card cut-card span-2">
+          <Kicker>USED IN PROJECTS</Kicker>
           <div className="check-list">
             {projects.map((p) => (
               <label key={p.id} className="check">
@@ -242,43 +222,64 @@ export function DeviceDetailPage({ deviceId }: { deviceId: string }) {
                 <Link to={`/projects/${p.id}`}>{p.name}</Link>
               </label>
             ))}
+            {!projects.length && <p className="muted small">No projects yet.</p>}
           </div>
-        </section>
-
-        <section className="panel-card cut-card span-2">
-          <Kicker>VARIABLES USING THIS DEVICE</Kicker>
-          {variables.length ? (
-            <div className="table-wrap">
-              <table className="table compact">
-                <thead><tr><th>Project</th><th>Variable</th><th>Direction</th><th>Topic</th></tr></thead>
-                <tbody>
-                  {variables.map((v) => (
-                    <tr key={v.id}>
-                      <td><Link to={`/projects/${v.projectId}/variables`}>{projects.find((p) => p.id === v.projectId)?.name}</Link></td>
-                      <td><code>{v.key}</code> <FirmwareBadge v={v} /></td>
-                      <td>{DIRECTION_META[v.direction].arrow} {DIRECTION_META[v.direction].label}</td>
-                      <td><code className="wrap">{v.stateTopic ?? v.commandTopic}</code></td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          ) : <p className="muted small">No project variables use this device yet.</p>}
-        </section>
-
-        <section className="panel-card cut-card">
-          <Kicker>RECENT COMMANDS</Kicker>
-          <MessageRows messages={commands} empty="No commands sent this session." />
-        </section>
-
-        <section className="panel-card cut-card">
-          <div className="panel-card-head">
-            <Kicker>MESSAGE HISTORY</Kicker>
-            <Link to={`/console?device=${device.id}`} className="link-arrow">OPEN IN CONSOLE →</Link>
-          </div>
-          <MessageRows messages={recent.slice(0, 14)} empty={device.simulated || brokerMode === 'broker' ? 'No messages yet.' : 'No messages — real hardware is not connected in demo mode.'} />
         </section>
       </div>
+
+      <More label="Technical details (MQTT)" className="device-more">
+        <div className="detail-grid">
+          <section className="panel-card cut-card">
+            <Kicker>CONNECTION DETAILS</Kicker>
+            <dl className="kv">
+              <div><dt>Broker</dt><dd>{device.simulated ? 'Kokoon server simulator' : brokerMode === 'broker' ? 'Platform MQTT broker' : 'Not connected (server in simulated mode)'}</dd></div>
+              <div><dt>Client ID</dt><dd><code>{device.hardwareId}</code></dd></div>
+              <div><dt>Topic prefix</dt><dd><code className="wrap">{device.topicPrefix}/#</code></dd></div>
+              <div><dt>Availability (LWT)</dt><dd><code className="wrap">{topics.availability(device.topicPrefix)}</code></dd></div>
+              <div><dt>Credentials</dt><dd className="muted">Never shown in the browser. <InfoTip text={flashedFromLms ? 'Issued to the LMS when the board was flashed and built into its firmware. They only allow this device’s own topics.' : 'Knowing a device ID or topic never grants access.'} /></dd></div>
+              <div><dt>TLS</dt><dd className="muted">Required for the real broker</dd></div>
+              <div><dt>State since</dt><dd>{rt ? timeAgo(rt.since, now) : '—'}</dd></div>
+              <div><dt>Messages (session)</dt><dd className="tabnum">{rt?.messageCount ?? 0}</dd></div>
+              <div><dt>Origin</dt><dd>{flashedFromLms ? 'Flashed from the Kokoon LMS' : device.origin === 'lms' ? 'Discovered from LMS (mock)' : 'Registered in IoT Studio'}</dd></div>
+              <div><dt>Registered</dt><dd>{new Date(device.createdAt).toLocaleDateString()}</dd></div>
+            </dl>
+          </section>
+
+          <section className="panel-card cut-card">
+            <Kicker>RECENT COMMANDS</Kicker>
+            <MessageRows messages={commands} empty="No commands sent this session." />
+          </section>
+
+          <section className="panel-card cut-card span-2">
+            <Kicker>VARIABLES USING THIS DEVICE</Kicker>
+            {variables.length ? (
+              <div className="table-wrap">
+                <table className="table compact">
+                  <thead><tr><th>Project</th><th>Variable</th><th>Direction</th><th>Topic</th></tr></thead>
+                  <tbody>
+                    {variables.map((v) => (
+                      <tr key={v.id}>
+                        <td><Link to={`/projects/${v.projectId}/variables`}>{projects.find((p) => p.id === v.projectId)?.name}</Link></td>
+                        <td><code>{v.key}</code> <FirmwareBadge v={v} /></td>
+                        <td>{DIRECTION_META[v.direction].arrow} {DIRECTION_META[v.direction].label}</td>
+                        <td><code className="wrap">{v.stateTopic ?? v.commandTopic}</code></td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : <p className="muted small">No project variables use this device yet.</p>}
+          </section>
+
+          <section className="panel-card cut-card span-2">
+            <div className="panel-card-head">
+              <Kicker>MESSAGE HISTORY</Kicker>
+              <Link to={`/console?device=${device.id}`} className="link-arrow">OPEN IN CONSOLE →</Link>
+            </div>
+            <MessageRows messages={recent.slice(0, 14)} empty={device.simulated || brokerMode === 'broker' ? 'No messages yet.' : 'No messages — real hardware is not connected in demo mode.'} />
+          </section>
+        </div>
+      </More>
     </main>
   );
 }

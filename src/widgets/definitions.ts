@@ -356,16 +356,13 @@ export function checkCompatibility(def: WidgetDefinition, v: Variable): Compat {
     return { level: 'error', reason: `${def.name} needs ${def.accepts.map((t) => TYPE_LABEL[t]).join(' / ')}; this is ${TYPE_LABEL[v.dataType]}.` };
   }
   if (def.io === 'write' && v.direction === 'telemetry') {
-    return { level: 'error', reason: 'Read-only telemetry: the device does not accept commands for it.' };
+    return { level: 'error', reason: 'This value only comes from the board. Pick one declared “IoT Studio → board” or “Both ways”.' };
   }
   if (def.io === 'write' && !v.commandTopic) {
     return { level: 'error', reason: 'No command topic set on this variable.' };
   }
   if (def.io === 'read' && v.direction === 'command') {
-    return { level: 'warn', reason: 'Command-only: shows the last value sent from a dashboard, not a device reading.' };
-  }
-  if (def.io === 'write' && v.direction === 'command') {
-    return { level: 'warn', reason: 'No reported state: the control can send but cannot confirm the device’s value.' };
+    return { level: 'warn', reason: 'Shows the last value a dashboard sent, not a reading from the board.' };
   }
   return { level: 'ok' };
 }

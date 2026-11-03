@@ -379,6 +379,16 @@ export function EmptyState({ icon, title, children, action }: { icon: string; ti
   );
 }
 
+/** Extra detail a first-time student doesn't need: closed until they ask for it. */
+export function More({ label, children, className }: { label: string; children: ReactNode; className?: string }) {
+  return (
+    <details className={cn('more', className)}>
+      <summary><Icon name="LuChevronRight" size={14} className="more-chev" /> {label}</summary>
+      <div className="more-body">{children}</div>
+    </details>
+  );
+}
+
 export function PageHeader({ kicker, title, serif, children, actions }: { kicker?: string; title: string; serif?: string; children?: ReactNode; actions?: ReactNode }) {
   return (
     <header className="page-head">

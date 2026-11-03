@@ -15,7 +15,7 @@ import {
 import { confirmDialog, toast } from '../state/ui';
 import type { Widget, WidgetType } from '../types/models';
 import { clamp, cn, downloadJson, timeAgo, uid } from '../utils';
-import { getWidgetDef, makeWidget } from '../widgets/definitions';
+import { checkCompatibility, getWidgetDef, makeWidget } from '../widgets/definitions';
 import { useNow } from '../widgets/hooks';
 
 function SaveStatus() {
@@ -54,6 +54,7 @@ export function EditorPage({ projectId, dashboardId }: { projectId: string; dash
   const dashboard = useStudio((s) => s.dashboards.find((d) => d.id === (dashboardId ?? project?.defaultDashboardId)));
   const allDashboards = useStudio((s) => s.dashboards.filter((d) => d.projectId === projectId));
   const devices = useStudio((s) => s.devices.filter((d) => project?.deviceIds.includes(d.id)));
+  const variables = useStudio((s) => s.variables.filter((v) => v.projectId === projectId));
   const deviceStates = useRuntime((s) => devices.map((d) => s.devices[d.id]?.state ?? 'waiting'));
   const history = useStudio((s) => (dashboard ? s.history[dashboard.id] : undefined));
   const narrow = useIsNarrow();
@@ -100,7 +101,11 @@ export function EditorPage({ projectId, dashboardId }: { projectId: string; dash
     if (!dashboard) return;
     const def = getWidgetDef(type);
     const spot = x !== undefined && y !== undefined ? { x, y } : findSpot(toItems(widgets), def.defaultSize.w, def.defaultSize.h);
-    const w = makeWidget(type, { ...spot }, { title: uniqueTitle(def.defaultConfig.title ?? def.name) });
+    // One variable that fits (or one that fits and isn't used here yet): connect it, so the widget works at once
+    const fits = def.io === 'none' ? [] : variables.filter((v) => checkCompatibility(def, v).level === 'ok');
+    const unused = fits.filter((v) => !widgets.some((x) => x.binding?.variableId === v.id));
+    const auto = fits.length === 1 ? fits[0] : unused.length === 1 ? unused[0] : undefined;
+    const w = makeWidget(type, { ...spot }, { title: uniqueTitle(auto?.displayName ?? def.defaultConfig.title ?? def.name) }, auto?.id);
     const next = applyLayout([...widgets, w], compact(toItems([...widgets, w]), w.id));
     if (!commit(next)) return;
     setSelectedId(w.id);

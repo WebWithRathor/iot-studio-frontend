@@ -3,6 +3,7 @@ import { Icon } from '../components/Icon';
 import { ProjectFormModal } from '../components/ProjectFormModal';
 import { Badge, Button, EmptyState, Menu, StateBadge } from '../components/ui';
 import { Link, navigate } from '../lib/router';
+import { useAuth } from '../state/auth';
 import { useRuntime } from '../state/runtime';
 import { ACCENTS, deleteProject, dismissOnboarding, duplicateProject, importProject, useStudio } from '../state/studio';
 import { confirmDialog, toast } from '../state/ui';
@@ -53,7 +54,6 @@ function ProjectStatus({ project }: { project: Project }) {
 
 function ProjectCard({ project, onEdit }: { project: Project; onEdit: (p: Project) => void }) {
   const dashboard = useStudio((s) => s.dashboards.find((d) => d.id === project.defaultDashboardId));
-  const widgetCount = useStudio((s) => s.dashboards.filter((d) => d.projectId === project.id).reduce((n, d) => n + d.widgets.length, 0));
   const now = useNow();
   const open = () => navigate(`/projects/${project.id}`);
   return (
@@ -90,35 +90,30 @@ function ProjectCard({ project, onEdit }: { project: Project; onEdit: (p: Projec
         </div>
         <h3 className="project-name">{project.name}</h3>
         <p className="project-desc">{project.description || 'No description yet.'}</p>
-        <dl className="project-meta">
-          <div><dt>Widgets</dt><dd>{widgetCount}</dd></div>
-          <div><dt>Devices</dt><dd>{project.deviceIds.length}</dd></div>
-          <div><dt>Status</dt><dd><ProjectStatus project={project} /></dd></div>
-        </dl>
         <div className="project-foot">
+          <ProjectStatus project={project} />
           <span>Edited {timeAgo(project.updatedAt, now)}</span>
-          <span>Activity {timeAgo(project.lastActivityAt, now)}</span>
         </div>
-        {project.lmsProgram && <Badge tone="info" className="project-lms" title="Linked LMS program (reference only)"><Icon name="LuLink" size={11} /> {project.lmsProgram.name}</Badge>}
       </div>
     </article>
   );
 }
 
-function Onboarding({ onCreate }: { onCreate: () => void }) {
+function Onboarding() {
   const dismissed = useStudio((s) => s.preferences.onboardingDismissed);
+  const hasSamples = useStudio((s) => s.projects.some((p) => p.sample));
   if (dismissed) return null;
   const steps = [
-    { n: '01', tag: 'IN THE LMS', title: 'Program the ESP32', body: 'Build your logic with blocks and add an MQTT block for each value you want to see or control. Flash it to the board.' },
-    { n: '02', tag: 'IN IOT STUDIO', title: 'Build a dashboard', body: 'Create a project, drop in toggles, gauges and charts, and arrange them on the grid.' },
-    { n: '03', tag: 'LIVE', title: 'Bind, monitor, control', body: 'Bind each widget to a variable. Readings flow in from the device; your controls publish commands back.' },
+    { n: '01', tag: 'IN THE LMS', title: 'Program your board', body: 'Use the IoT blocks for each value you want to see or control, then flash it.' },
+    { n: '02', tag: 'HERE', title: 'Make a dashboard', body: 'Create a project and add switches, gauges and charts.' },
+    { n: '03', tag: 'LIVE', title: 'Watch and control', body: 'Connect each widget to a value from your board and see it change live.' },
   ];
   return (
     <section className="onboard" aria-label="How IoT Studio works">
       <div className="onboard-head">
         <div>
           <div className="kicker kicker-accent">// HOW IT WORKS</div>
-          <h2 className="section-title">From blocks to a live dashboard</h2>
+          <h2 className="section-title">Three steps</h2>
         </div>
         <button type="button" className="link-btn" onClick={() => void dismissOnboarding()}>Hide guide</button>
       </div>
@@ -131,36 +126,8 @@ function Onboarding({ onCreate }: { onCreate: () => void }) {
           </div>
         ))}
       </div>
-      <div className="onboard-cta">
-        <Button variant="primary" icon="LuPlus" onClick={onCreate}>Create your first project</Button>
-        <span className="muted small">or open one of the sample projects below — their devices are simulated.</span>
-      </div>
+      {hasSamples && <p className="muted small">Not sure where to start? Open a sample project below — its devices are simulated.</p>}
     </section>
-  );
-}
-
-function LiveFeed() {
-  const activity = useStudio((s) => s.activity.slice(0, 7));
-  const msgsPerMin = useRuntime((s) => s.messages.filter((m) => m.at > Date.now() - 60_000).length);
-  const now = useNow();
-  return (
-    <aside className="feed cut-frame-dark" aria-label="Recent activity">
-      <div className="feed-head">
-        <span>LIVE FEED</span>
-        <span className="feed-sync"><i /> SIM</span>
-      </div>
-      <div className="feed-stat">
-        <strong>{msgsPerMin}</strong> <span>MQTT messages / min</span>
-      </div>
-      <ul className="feed-list">
-        {activity.map((a) => (
-          <li key={a.id}>
-            <span className="feed-time">{timeAgo(a.at, now)}</span>
-            <span>{a.message}</span>
-          </li>
-        ))}
-      </ul>
-    </aside>
   );
 }
 
@@ -178,7 +145,7 @@ function DeviceSummary() {
           <li key={d.id}>
             <Link to={`/devices/${d.id}`} className="dev-row">
               <span className="dev-row-name">{d.name}</span>
-              {d.simulated ? <span className="sim-tag">SIM</span> : <span className="badge badge-info">LMS</span>}
+              {d.simulated && <span className="sim-tag">SIM</span>}
               <StateBadge state={states[i]} short />
             </Link>
           </li>
@@ -192,13 +159,13 @@ type Sort = 'recent' | 'name' | 'created' | 'activity';
 
 export function HomePage() {
   const projects = useStudio((s) => s.projects);
+  const firstName = useAuth((s) => s.user?.name.split(' ')[0] ?? '');
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<Sort>('recent');
   const [createOpen, setCreateOpen] = useState(false);
   const [editing, setEditing] = useState<Project | null>(null);
   const fileRef = useRef<HTMLInputElement | null>(null);
 
-  const recent = useMemo(() => projects.slice().sort((a, b) => b.lastActivityAt - a.lastActivityAt).slice(0, 3), [projects]);
   const list = useMemo(() => {
     const query = q.trim().toLowerCase();
     const filtered = projects.filter((p) => !query || `${p.name} ${p.description} ${p.category}`.toLowerCase().includes(query));
@@ -213,38 +180,19 @@ export function HomePage() {
 
   return (
     <main className="page" id="main">
-      <section className="hero">
+      <section className="hero hero-solo">
         <div className="hero-main">
-          <div className="hero-kicker"><i /> KOKOON LABS · IOT STUDIO</div>
-          <h1 className="hero-title">
-            BUILD THE <em className="serif">dashboard</em>
-            <br />FOR YOUR HARDWARE
-          </h1>
-          <p className="hero-sub">Program your ESP32 in the LMS, then design the screen that monitors and controls it — toggles, gauges, charts and colour wheels, bound to live MQTT variables.</p>
+          <div className="hero-text">
+            <h1 className="hero-title"><em className="serif">Hi</em> {firstName}</h1>
+            <p className="hero-sub">Make a screen that shows what your board senses and lets you control it.</p>
+          </div>
           <div className="hero-actions">
             <Button variant="primary" size="lg" icon="LuPlus" onClick={() => setCreateOpen(true)}>Create project</Button>
-            <Button size="lg" icon="LuTerminal" onClick={() => navigate('/console')}>Watch MQTT traffic</Button>
           </div>
         </div>
-        <LiveFeed />
       </section>
 
-      <Onboarding onCreate={() => setCreateOpen(true)} />
-
-      {projects.length > 0 && (
-        <section className="recent" aria-label="Recently active">
-          <div className="kicker kicker-accent">// JUMP BACK IN</div>
-          <div className="recent-row">
-            {recent.map((p) => (
-              <Link key={p.id} to={`/projects/${p.id}`} className="recent-item cut-card">
-                <span className="project-icon" style={{ background: ACCENTS[p.accent]?.var }}><Icon name={p.icon} size={15} /></span>
-                <span className="recent-name">{p.name}</span>
-                <Icon name="LuArrowUpRight" size={15} />
-              </Link>
-            ))}
-          </div>
-        </section>
-      )}
+      <Onboarding />
 
       <section className="projects-section" aria-label="All projects">
         <div className="section-head">
@@ -252,9 +200,9 @@ export function HomePage() {
             <h2 className="section-title">
               <em className="serif">Your</em> projects
             </h2>
-            <span className="kicker kicker-muted">// {projects.length} PROJECTS</span>
           </div>
           <div className="toolbar">
+            {projects.length > 6 && (<>
             <div className="search">
               <Icon name="LuSearch" size={15} />
               <input id="project-search" className="input-bare" placeholder="Search projects" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search projects" />
@@ -265,7 +213,8 @@ export function HomePage() {
               <option value="created">Newest</option>
               <option value="name">Name A–Z</option>
             </select>
-            <Button icon="LuUpload" onClick={() => fileRef.current?.click()} title="Import a project exported from IoT Studio">Import</Button>
+            </>)}
+            <Button variant="ghost" size="sm" icon="LuUpload" onClick={() => fileRef.current?.click()} title="Import a project exported from IoT Studio">Import</Button>
             <input
               ref={fileRef}
               type="file"
@@ -287,7 +236,7 @@ export function HomePage() {
             {list.map((p) => <ProjectCard key={p.id} project={p} onEdit={setEditing} />)}
             {!projects.length && (
               <EmptyState icon="LuLayoutDashboard" title="No projects yet" action={<Button variant="primary" icon="LuPlus" onClick={() => setCreateOpen(true)}>Create project</Button>}>
-                A project holds a dashboard, its variables and the devices it talks to.
+                Make one to start building a dashboard for your board.
               </EmptyState>
             )}
             {projects.length > 0 && !list.length && (

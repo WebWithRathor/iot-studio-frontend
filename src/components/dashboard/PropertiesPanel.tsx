@@ -4,7 +4,7 @@ import type { Binding, Dashboard, Variable, Widget, WidgetConfig } from '../../t
 import { clamp, cn } from '../../utils';
 import { getWidgetDef, type FieldDef } from '../../widgets/definitions';
 import { Icon } from '../Icon';
-import { Button, Field, IconButton, Switch, Tabs } from '../ui';
+import { Button, Field, IconButton, More, Switch, Tabs } from '../ui';
 import { BindingPanel } from './BindingPanel';
 import { COLS } from './layoutEngine';
 
@@ -115,20 +115,18 @@ export function PropertiesPanel(props: {
         </div>
         <div className="props-empty">
           <h3>{props.dashboard.name}</h3>
-          <dl className="kv">
-            <div><dt>Widgets</dt><dd>{props.dashboard.widgets.length}</dd></div>
-            <div><dt>Bound to variables</dt><dd>{bound}</dd></div>
-          </dl>
-          <div className="tips">
-            <div className="kicker kicker-muted">// SHORTCUTS</div>
-            <ul>
+          <p className="muted small">Click a widget on the canvas to set it up and connect it to a value from your board.</p>
+          {props.dashboard.widgets.length > bound && (
+            <p className="muted small">{props.dashboard.widgets.length - bound} widget{props.dashboard.widgets.length - bound === 1 ? ' isn’t' : 's aren’t'} connected yet.</p>
+          )}
+          <More label="Keyboard shortcuts">
+            <ul className="tips">
               <li><kbd>Click</kbd> select · <kbd>Drag</kbd> move · corner handle resize</li>
               <li><kbd>←↑→↓</kbd> move · <kbd>Shift</kbd>+arrows resize</li>
               <li><kbd>Ctrl</kbd>+<kbd>D</kbd> duplicate · <kbd>Del</kbd> delete</li>
               <li><kbd>Ctrl</kbd>+<kbd>Z</kbd> undo · <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd> redo</li>
             </ul>
-          </div>
-          <p className="muted small">Select a widget on the canvas to configure it and bind it to a variable.</p>
+          </More>
         </div>
       </aside>
     );

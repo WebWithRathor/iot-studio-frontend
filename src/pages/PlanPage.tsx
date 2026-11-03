@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '../components/Icon';
 import { PlanBadge, TokenMeter } from '../components/tokens';
-import { Badge, Button, Field, PageHeader } from '../components/ui';
+import { Badge, Button, Field, More, PageHeader } from '../components/ui';
 import { Link } from '../lib/router';
 import { chargedWidgets, formatTokens } from '../lib/tokens';
 import { ApiError, errorMessage } from '../services/api/client';
@@ -82,7 +82,7 @@ export function PlanPage() {
   return (
     <main className="page" id="main">
       <PageHeader kicker="ACCOUNT" title="Plan" serif="& tokens">
-        Tokens are your build budget. Projects, dashboards and widgets use tokens; deleting them gives the tokens straight back. Variables, devices and live data are always free.
+        Building uses tokens; deleting gives them back. Live data is always free.
       </PageHeader>
 
       <div className="plan-top">
@@ -95,6 +95,7 @@ export function PlanPage() {
             <div className="plan-big"><strong>{formatTokens(b.available)}</strong><span>tokens left</span></div>
           </div>
           <TokenMeter />
+          <More label="Where my tokens went">
           <dl className="kv">
             <div><dt>Plan allowance</dt><dd>{formatTokens(b.allowance - b.bonusTokens)}</dd></div>
             {b.bonusTokens > 0 && <div><dt>Bonus tokens</dt><dd>+{formatTokens(b.bonusTokens)}</dd></div>}
@@ -103,6 +104,7 @@ export function PlanPage() {
             <div><dt>Widgets</dt><dd>{b.breakdown.widgets.count} · {formatTokens(b.breakdown.widgets.tokens)}</dd></div>
             {b.breakdown.widgets.free > 0 && <div><dt>Free sample widgets</dt><dd>{b.breakdown.widgets.free} · 0</dd></div>}
           </dl>
+          </More>
         </section>
         <RedeemCard />
       </div>
@@ -141,41 +143,43 @@ export function PlanPage() {
         </article>
       </section>
 
-      <section className="plan-costs">
-        <article className="plan-card cut-card">
-          <div className="kicker kicker-accent">// WHAT THINGS COST</div>
-          <table className="table compact cost-table">
-            <tbody>
-              <tr><td>New project <span className="muted">(incl. first dashboard)</span></td><td>{formatTokens(c.project)}</td></tr>
-              <tr><td>Each extra dashboard</td><td>{formatTokens(c.dashboard)}</td></tr>
-              <tr><td>Each widget / element</td><td>{formatTokens(c.widget)}</td></tr>
-              <tr><td>Variables, devices, live data</td><td>free</td></tr>
-              <tr><td>Sample projects &amp; their widgets</td><td>free</td></tr>
-            </tbody>
-          </table>
-          <p className="muted small">Deleting refunds the same amount. Going over a lowered budget never deletes your work — you just can’t add more until you’re back under it.</p>
-        </article>
-      </section>
+      <More label="What things cost">
+        <section className="plan-costs">
+          <article className="plan-card cut-card">
+            <div className="kicker kicker-accent">// WHAT THINGS COST</div>
+            <table className="table compact cost-table">
+              <tbody>
+                <tr><td>New project <span className="muted">(incl. first dashboard)</span></td><td>{formatTokens(c.project)}</td></tr>
+                <tr><td>Each extra dashboard</td><td>{formatTokens(c.dashboard)}</td></tr>
+                <tr><td>Each widget / element</td><td>{formatTokens(c.widget)}</td></tr>
+                <tr><td>Variables, devices, live data</td><td>free</td></tr>
+                <tr><td>Sample projects &amp; their widgets</td><td>free</td></tr>
+              </tbody>
+            </table>
+            <p className="muted small">Deleting refunds the same amount. Going over a lowered budget never deletes your work — you just can’t add more until you’re back under it.</p>
+          </article>
+        </section>
 
-      <section className="panel-card cut-card">
-        <div className="kicker kicker-accent">// TOKENS BY PROJECT</div>
-        <div className="table-wrap">
-          <table className="table">
-            <thead><tr><th>Project</th><th>Dashboards</th><th>Widgets</th><th>Tokens</th></tr></thead>
-            <tbody>
-              {perProject.map(({ p, tokens, dashboards: dn, widgets }) => (
-                <tr key={p.id}>
-                  <td><Link to={`/projects/${p.id}`}>{p.name}</Link> {p.sample && <Badge tone="info">SAMPLE · FREE</Badge>}</td>
-                  <td>{dn}</td>
-                  <td>{widgets}</td>
-                  <td><strong>{formatTokens(tokens)}</strong></td>
-                </tr>
-              ))}
-              {!perProject.length && <tr><td colSpan={4} className="muted">No projects yet.</td></tr>}
-            </tbody>
-          </table>
-        </div>
-      </section>
+        <section className="panel-card cut-card">
+          <div className="kicker kicker-accent">// TOKENS BY PROJECT</div>
+          <div className="table-wrap">
+            <table className="table">
+              <thead><tr><th>Project</th><th>Dashboards</th><th>Widgets</th><th>Tokens</th></tr></thead>
+              <tbody>
+                {perProject.map(({ p, tokens, dashboards: dn, widgets }) => (
+                  <tr key={p.id}>
+                    <td><Link to={`/projects/${p.id}`}>{p.name}</Link> {p.sample && <Badge tone="info">SAMPLE · FREE</Badge>}</td>
+                    <td>{dn}</td>
+                    <td>{widgets}</td>
+                    <td><strong>{formatTokens(tokens)}</strong></td>
+                  </tr>
+                ))}
+                {!perProject.length && <tr><td colSpan={4} className="muted">No projects yet.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </More>
     </main>
   );
 }

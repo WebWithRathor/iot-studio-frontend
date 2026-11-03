@@ -9,7 +9,7 @@ import { errorMessage } from '../../services/api/client';
 import { cn } from '../../utils';
 import { Icon } from '../Icon';
 import { PlanBadge, TokenMeter, TokenPill } from '../tokens';
-import { Badge, Button, StateBadge, Switch } from '../ui';
+import { Badge, Button, More, StateBadge, Switch } from '../ui';
 
 function Popover({ trigger, children, label }: { trigger: ReactNode; children: ReactNode; label: string }) {
   const [open, setOpen] = useState(false);
@@ -39,21 +39,27 @@ function SimulationStatus() {
   const canManage = useHasPermission('mqtt:manage');
   const canReset = useHasPermission('workspace:demo:reset');
   const mode = status?.mode ?? 'simulated';
-  const label = stream !== 'connected' ? 'LIVE: RECONNECTING' : mode === 'broker' ? 'BROKER: CONNECTED' : paused ? 'BROKER: PAUSED' : 'BROKER: SIMULATED';
+  const label = stream !== 'connected' ? 'Reconnecting…' : mode === 'broker' ? 'Live' : paused ? 'Demo paused' : 'Demo data';
   return (
     <Popover label="Live data status" trigger={<span className={cn('lab-status', (paused || stream !== 'connected') && 'is-paused')}><i aria-hidden="true" /> {label}</span>}>
-      <div className="kicker kicker-accent">// {mode === 'broker' ? 'MQTT BROKER' : 'DEMO MODE'}</div>
+      <div className="kicker kicker-accent">// {mode === 'broker' ? 'LIVE DATA' : 'DEMO MODE'}</div>
       <p className="pop-text">
-        {mode === 'broker'
-          ? 'The Kokoon server is connected to an MQTT broker. Devices marked SIM are simulated by the server; the rest are real hardware.'
-          : 'The Kokoon server runs a simulated broker: every device and message here is simulated (labelled SIM). Nothing reaches real hardware.'}
+        {stream !== 'connected'
+          ? 'Lost the connection to Kokoon for a moment. Reconnecting on its own…'
+          : mode === 'broker'
+            ? 'Readings from your boards arrive here live, and your controls reach them straight away.'
+            : 'Everything here is a demo: devices and readings are simulated, nothing reaches real hardware.'}
       </p>
       <dl className="kv">
-        <div><dt>Server transport</dt><dd>{status?.transport ?? '—'}</dd></div>
-        <div><dt>Server ↔ broker</dt><dd>{status ? <StateBadge state={status.broker} /> : '—'}</dd></div>
-        <div><dt>Browser ↔ server</dt><dd><StateBadge state={stream} /></dd></div>
         <div><dt>Devices online</dt><dd>{online} / {total}</dd></div>
       </dl>
+      <More label="Technical details">
+        <dl className="kv">
+          <div><dt>Server transport</dt><dd>{status?.transport ?? '—'}</dd></div>
+          <div><dt>Server ↔ broker</dt><dd>{status ? <StateBadge state={status.broker} /> : '—'}</dd></div>
+          <div><dt>Browser ↔ server</dt><dd><StateBadge state={stream} /></dd></div>
+        </dl>
+      </More>
       {canManage ? (
         <>
           <Switch checked={!paused} label={paused ? 'Simulation paused (all users)' : 'Simulation running (all users)'} onChange={(on) => void setSimulationPaused(!on)} />
@@ -64,10 +70,10 @@ function SimulationStatus() {
             <option value={5000}>Every 5 seconds</option>
           </select>
         </>
-      ) : (
+      ) : mode !== 'broker' ? (
         <p className="muted small">The simulation is shared by everyone on this server; administrators can pause it or change its speed. You can disconnect your own simulated devices from their device page.</p>
-      )}
-      {canReset && (
+      ) : null}
+      {canReset && (mode !== 'broker' || canManage) && (
         <Button size="sm" variant="ghost" icon="LuRefreshCw" onClick={async () => {
           const ok = await confirmDialog({ title: 'Reset demo data?', message: 'This deletes all of YOUR projects, dashboards, variables and simulated devices on the server and restores the sample workspace. Other users are not affected.', confirmLabel: 'Reset my workspace', danger: true });
           if (!ok) return;
@@ -132,7 +138,6 @@ export function AppShell({ children }: { children: ReactNode }) {
         <div className="topbar-in">
           <div className="brand">
             <Link to="/" className="logo" title="Kokoon IoT Studio">KOKOON<span>.</span></Link>
-            <span className="sysver">IOT_STUDIO: {config.appVersion}</span>
           </div>
           <nav className="topnav" aria-label="Main">
             {NAV.map((n) => (

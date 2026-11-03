@@ -3,7 +3,7 @@ import { DashboardView } from '../components/dashboard/DashboardView';
 import { DeviceCreateModal } from '../components/DeviceCreateModal';
 import { Icon, PROJECT_ICONS } from '../components/Icon';
 import { ProjectFormModal } from '../components/ProjectFormModal';
-import { Badge, Button, EmptyState, Field, FirmwareBadge, InfoTip, Kicker, Menu, Modal, SimTag, StateBadge, Switch } from '../components/ui';
+import { Badge, Button, EmptyState, Field, FirmwareBadge, Kicker, Menu, Modal, More, SimTag, StateBadge, Switch } from '../components/ui';
 import { DIRECTION_META, VariableForm } from '../components/VariableForm';
 import { config } from '../services/config';
 import { Link, navigate, Redirect } from '../lib/router';
@@ -26,7 +26,6 @@ const TABS = [
   { seg: 'dashboard', label: 'Dashboard' },
   { seg: 'devices', label: 'Devices' },
   { seg: 'variables', label: 'Variables' },
-  { seg: 'activity', label: 'Activity' },
   { seg: 'settings', label: 'Settings' },
 ];
 
@@ -45,21 +44,14 @@ export function ProjectLayout({ projectId, tab }: { projectId: string; tab: stri
       <header className="project-head">
         <span className="project-icon lg" style={{ background: ACCENTS[project.accent]?.var }}><Icon name={project.icon} size={24} /></span>
         <div className="project-head-main">
-          <Kicker>{project.category.toUpperCase()} · IOT STUDIO PROJECT</Kicker>
           <h1 className="page-title">{project.name}</h1>
           {project.description && <p className="page-sub">{project.description}</p>}
           {project.lmsProgram && (
             <p className="lms-link">
-              <Icon name="LuLink" size={13} /> Linked LMS program: <strong>{project.lmsProgram.name}</strong> {project.lmsProgram.version}
-              {project.lmsProgram.source === 'lms' ? (
-                <>
-                  <InfoTip text="Created from a program in the Kokoon LMS. Flashing the program again updates this project’s variables; your dashboards stay as they are." />
-                  <a href={config.lmsUrl} target="_blank" rel="noopener noreferrer">Open in LMS <Icon name="LuExternalLink" size={12} /></a>
-                </>
-              ) : (
-                <InfoTip text="A reference only. The LMS program and this IoT Studio project are separate records; editing one never changes the other." />
+              <Icon name="LuLink" size={13} /> Program: <strong>{project.lmsProgram.name}</strong>
+              {project.lmsProgram.source === 'lms' && (
+                <a href={config.lmsUrl} target="_blank" rel="noopener noreferrer">Open in LMS <Icon name="LuExternalLink" size={12} /></a>
               )}
-              {project.lmsProgram.source === 'mock' && <Badge>MOCK</Badge>}
             </p>
           )}
         </div>
@@ -120,64 +112,49 @@ function Panel({ title, kicker, actions, children, className }: { title?: string
 
 function Overview({ project }: { project: Project }) {
   const dashboard = useStudio((s) => s.dashboards.find((d) => d.id === project.defaultDashboardId));
-  const widgets = useStudio((s) => s.dashboards.filter((d) => d.projectId === project.id).reduce((n, d) => n + d.widgets.length, 0));
   const variables = useStudio((s) => s.variables.filter((v) => v.projectId === project.id));
   const devices = useStudio((s) => s.devices.filter((d) => project.deviceIds.includes(d.id)));
   const runtimeDevices = useRuntime((s) => devices.map((d) => s.devices[d.id]));
-  const msgCount = useRuntime((s) => s.messages.filter((m) => m.deviceId && project.deviceIds.includes(m.deviceId) && m.at > Date.now() - 300_000).length);
   const events = useProjectActivity(project).slice(0, 8);
   const now = useNow();
-  const online = runtimeDevices.filter((d) => d?.state === 'connected').length;
 
   return (
     <div className="overview">
-      <div className="stats">
-        <div className="stat"><strong>{widgets}</strong><span>WIDGETS</span></div>
-        <div className="stat"><strong>{online}/{devices.length}</strong><span>DEVICES ONLINE</span></div>
-        <div className="stat"><strong>{variables.length}</strong><span>VARIABLES</span></div>
-        <div className="stat"><strong>{msgCount}</strong><span>MESSAGES · 5 MIN</span></div>
+      <div className="overview-bar">
+        {devices.map((d, i) => (
+          <Link key={d.id} to={`/devices/${d.id}`} className="board-chip cut-card">
+            <Icon name="LuCpu" size={16} />
+            <strong>{d.name}</strong>
+            {d.simulated && <SimTag compact />}
+            <StateBadge state={runtimeDevices[i]?.state ?? 'waiting'} short />
+          </Link>
+        ))}
+        {!devices.length && <p className="muted small">No board in this project yet. <Link to={`/projects/${project.id}/devices`}>Add your board</Link> to see its data.</p>}
+        <Link to={`/projects/${project.id}/devices`} className="link-arrow">MANAGE BOARDS →</Link>
       </div>
-      <div className="overview-grid">
-        <Panel kicker="LIVE DASHBOARD" title={dashboard?.name ?? 'Dashboard'} className="overview-dash"
-          actions={<Button size="sm" icon="LuPencil" onClick={() => navigate(`/projects/${project.id}/editor/${project.defaultDashboardId}?mode=edit`)}>Edit</Button>}>
-          {dashboard && dashboard.widgets.length ? (
-            <DashboardView dashboard={dashboard} rowHeight={48} gap={10} showHeaders={project.settings.showWidgetHeaders} />
-          ) : (
-            <EmptyState icon="LuLayoutDashboard" title="No widgets yet" action={<Button variant="primary" icon="LuPlus" onClick={() => navigate(`/projects/${project.id}/editor/${project.defaultDashboardId}?mode=edit`)}>Open editor</Button>}>
-              Add a toggle, a gauge or a chart and bind it to a variable.
-            </EmptyState>
-          )}
-        </Panel>
-        <div className="overview-side">
-          <Panel kicker="DEVICES" actions={<Link to={`/projects/${project.id}/devices`} className="link-arrow">MANAGE →</Link>}>
-            {devices.length ? (
-              <ul className="mini-list">
-                {devices.map((d, i) => (
-                  <li key={d.id}>
-                    <Link to={`/devices/${d.id}`} className="mini-row">
-                      <span className="mini-main"><strong>{d.name}</strong><code>{d.hardwareId}</code></span>
-                      {d.simulated && <SimTag compact />}
-                      <StateBadge state={runtimeDevices[i]?.state ?? 'waiting'} short />
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <p className="muted small">No devices yet. <Link to={`/projects/${project.id}/devices`}>Associate one</Link> to receive data.</p>
-            )}
-          </Panel>
-          <Panel kicker="RECENT TELEMETRY" actions={<Link to={`/projects/${project.id}/variables`} className="link-arrow">VARIABLES →</Link>}>
-            <TelemetryList variables={variables.slice(0, 7)} />
-          </Panel>
-          <Panel kicker="RECENT EVENTS" actions={<Link to={`/projects/${project.id}/activity`} className="link-arrow">ALL →</Link>}>
-            <ul className="event-mini">
-              {events.map((e) => (
-                <li key={e.id}><span className="muted">{timeAgo(e.at, now)}</span> {e.message}</li>
-              ))}
-              {!events.length && <li className="muted">Nothing yet.</li>}
-            </ul>
-          </Panel>
-        </div>
+      <Panel kicker="LIVE DASHBOARD" title={dashboard?.name ?? 'Dashboard'} className="overview-dash"
+        actions={<Button size="sm" icon="LuPencil" onClick={() => navigate(`/projects/${project.id}/editor/${project.defaultDashboardId}?mode=edit`)}>Edit</Button>}>
+        {dashboard && dashboard.widgets.length ? (
+          <DashboardView dashboard={dashboard} rowHeight={48} gap={10} showHeaders={project.settings.showWidgetHeaders} />
+        ) : (
+          <EmptyState icon="LuLayoutDashboard" title="No widgets yet" action={<Button variant="primary" icon="LuPlus" onClick={() => navigate(`/projects/${project.id}/editor/${project.defaultDashboardId}?mode=edit`)}>Open editor</Button>}>
+            Add a switch, a gauge or a chart and connect it to a value from your board.
+          </EmptyState>
+        )}
+      </Panel>
+      <div className="overview-more">
+        <More label="Latest values">
+          <TelemetryList variables={variables.slice(0, 7)} />
+        </More>
+        <More label="Recent activity">
+          <ul className="event-mini">
+            {events.map((e) => (
+              <li key={e.id}><span className="muted">{timeAgo(e.at, now)}</span> {e.message}</li>
+            ))}
+            {!events.length && <li className="muted">Nothing yet.</li>}
+          </ul>
+          <Link to={`/projects/${project.id}/activity`} className="link-arrow">ALL ACTIVITY →</Link>
+        </More>
       </div>
     </div>
   );
@@ -274,30 +251,26 @@ function ProjectDevicesTab({ project }: { project: Project }) {
   const now = useNow();
   return (
     <div className="stack">
-      <Panel kicker="ASSOCIATED DEVICES" title="Devices in this project"
+      <Panel kicker="DEVICES" title="Boards in this project"
         actions={<Button size="sm" icon="LuPlus" onClick={() => setCreateOpen(true)}>Add simulated device</Button>}>
-        <p className="muted small">Devices are shared across projects — associating one here does not copy it. <InfoTip text="One physical ESP32 can feed several projects. Authorization for real devices will be enforced by the backend." /></p>
         <div className="device-rows">
           {devices.map((d, i) => {
-            const vs = variables.filter((v) => v.deviceId === d.id).length;
             const missing = d.capabilities.filter((c) => !variables.some((v) => v.deviceId === d.id && v.key === c.key));
             return (
               <div key={d.id} className="device-row-card">
                 <div className="drc-main">
                   <Link to={`/devices/${d.id}`} className="drc-name">{d.name}</Link>
-                  <code>{d.hardwareId}</code>
-                  <span className="muted small">{d.board} · {d.firmwareVersion}</span>
+                  <span className="muted small">{d.board}</span>
                 </div>
                 <div className="drc-meta">
-                  {d.simulated ? <SimTag /> : <Badge tone="info">FROM LMS</Badge>}
+                  {d.simulated && <SimTag />}
                   <StateBadge state={rt[i]?.state ?? 'waiting'} />
                   <span className="muted small">seen {timeAgo(rt[i]?.lastSeen, now)}</span>
-                  <span className="muted small">{vs} variables</span>
                 </div>
                 <div className="drc-actions">
                   {missing.length > 0 && (
                     <Button size="sm" icon="LuPlus" onClick={async () => { const added = (await Promise.all(missing.map((c) => importDeviceVariable(project.id, d.id, c.key)))).filter(Boolean).length; if (added) toast(`Added ${added} variable${added === 1 ? '' : 's'} from ${d.name}`, 'success'); }}>
-                      Add {missing.length} declared variable{missing.length > 1 ? 's' : ''}
+                      Add {missing.length} value{missing.length > 1 ? 's' : ''} from this board
                     </Button>
                   )}
                   <Button size="sm" variant="ghost" icon="LuX" onClick={async () => {
@@ -307,17 +280,17 @@ function ProjectDevicesTab({ project }: { project: Project }) {
               </div>
             );
           })}
-          {!devices.length && <EmptyState icon="LuCpu" title="No devices associated">Associate a device below, or add a simulated one to try things out.</EmptyState>}
+          {!devices.length && <EmptyState icon="LuCpu" title="No board yet">Add your board below, or a simulated one to try things out.</EmptyState>}
         </div>
         {others.length > 0 && (
           <div className="assoc">
-            <label className="field-label" htmlFor="assoc-pick">Associate an existing device</label>
+            <label className="field-label" htmlFor="assoc-pick">Add another board</label>
             <div className="assoc-row">
               <select id="assoc-pick" className="input" value={pick} onChange={(e) => setPick(e.target.value)}>
                 <option value="">Choose a device…</option>
-                {others.map((d) => <option key={d.id} value={d.id}>{d.name} ({d.hardwareId}){d.simulated ? ' · simulated' : ' · LMS'}</option>)}
+                {others.map((d) => <option key={d.id} value={d.id}>{d.name}{d.simulated ? ' (simulated)' : ''}</option>)}
               </select>
-              <Button variant="primary" disabled={!pick} onClick={async () => { if (await setProjectDevice(project.id, pick, true)) { setPick(''); toast('Device associated', 'success'); } }}>Associate</Button>
+              <Button variant="primary" disabled={!pick} onClick={async () => { if (await setProjectDevice(project.id, pick, true)) { setPick(''); toast('Board added', 'success'); } }}>Add</Button>
             </div>
           </div>
         )}
@@ -346,26 +319,31 @@ function VariablesTab({ project }: { project: Project }) {
   const brokerMode = useRuntime((s) => s.status?.mode === 'broker');
   const [editing, setEditing] = useState<Variable | 'new' | null>(null);
   const [q, setQ] = useState('');
+  // MQTT topics, types and counts are for students who want to look under the hood
+  const [details, setDetails] = useState(false);
   const now = useNow();
   const query = q.trim().toLowerCase();
   const rows = variables.map((v, i) => ({ v, i })).filter(({ v }) => !query || `${v.key} ${v.displayName} ${v.stateTopic ?? ''} ${v.commandTopic ?? ''}`.toLowerCase().includes(query));
 
   return (
     <div className="stack">
-      <div className="explain cut-card">
-        <div className="explain-item"><span className="explain-n">1</span><div><strong>Logical variable</strong><p>What dashboard widgets bind to, e.g. <code>led_state</code>. Lives in IoT Studio.</p></div></div>
-        <div className="explain-arrow" aria-hidden="true">→</div>
-        <div className="explain-item"><span className="explain-n">2</span><div><strong>MQTT topic</strong><p>The address messages travel on, e.g. <code>kokoon/devices/…/telemetry/led_state</code>.</p></div></div>
-        <div className="explain-arrow" aria-hidden="true">→</div>
-        <div className="explain-item"><span className="explain-n">3</span><div><strong>Firmware variable</strong><p>Defined by the MQTT block in your LMS program. Not synced in this prototype.</p></div></div>
-      </div>
-      <Panel kicker={`${variables.length} VARIABLES`} title="Variables"
+      <Panel kicker="VARIABLES" title="Values your board shares"
         actions={
           <div className="toolbar">
-            <div className="search"><Icon name="LuSearch" size={15} /><input id="var-search" className="input-bare" placeholder="Filter" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Filter variables" /></div>
+            {variables.length > 8 && <div className="search"><Icon name="LuSearch" size={15} /><input id="var-search" className="input-bare" placeholder="Filter" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Filter variables" /></div>}
+            {variables.length > 0 && <Switch checked={details} label="Show MQTT details" onChange={setDetails} />}
             <Button variant="primary" size="sm" icon="LuPlus" onClick={() => setEditing('new')}>New variable</Button>
           </div>
         }>
+        <More label="How variables work">
+          <div className="explain cut-card">
+            <div className="explain-item"><span className="explain-n">1</span><div><strong>Variable</strong><p>What a widget connects to, e.g. <code>led</code>. Lives in IoT Studio.</p></div></div>
+            <div className="explain-arrow" aria-hidden="true">→</div>
+            <div className="explain-item"><span className="explain-n">2</span><div><strong>MQTT topic</strong><p>The address messages travel on, e.g. <code>kokoon/…/telemetry/led</code>.</p></div></div>
+            <div className="explain-arrow" aria-hidden="true">→</div>
+            <div className="explain-item"><span className="explain-n">3</span><div><strong>Your program</strong><p>The IoT block in your LMS program that sends or uses the value.</p></div></div>
+          </div>
+        </More>
         {variables.length === 0 ? (
           <EmptyState icon="LuHash" title="No variables yet" action={<Button variant="primary" icon="LuPlus" onClick={() => setEditing('new')}>New variable</Button>}>
             Create one, or associate a device and add the variables it declares.
@@ -375,7 +353,7 @@ function VariablesTab({ project }: { project: Project }) {
             <table className="table">
               <thead>
                 <tr>
-                  <th>Variable</th><th>Type</th><th>Device</th><th>Topic(s)</th><th>Direction</th><th>Last value</th><th>Updated</th><th>Bindings</th><th>Status</th><th><span className="sr">Actions</span></th>
+                  <th>Variable</th>{details && <th>Type</th>}<th>Board</th>{details && <th>Topic(s)</th>}<th>Direction</th><th>Last value</th>{details && <th>Updated</th>}{details && <th>Widgets</th>}<th>Status</th><th><span className="sr">Actions</span></th>
                 </tr>
               </thead>
               <tbody>
@@ -385,13 +363,15 @@ function VariablesTab({ project }: { project: Project }) {
                   const n = bindingCount(v.id, dashboards);
                   return (
                     <tr key={v.id}>
-                      <td><code className="strong">{v.key}</code> <FirmwareBadge v={v} /><div className="muted small">{v.displayName}</div></td>
-                      <td><Badge>{dataTypeLabel(v.dataType)}</Badge></td>
+                      <td><strong>{v.displayName}</strong>{details && <> <FirmwareBadge v={v} /></>}<div className="muted small"><code>{v.key}</code></div></td>
+                      {details && <td><Badge>{dataTypeLabel(v.dataType)}</Badge></td>}
                       <td>{dev ? <Link to={`/devices/${dev.id}`}>{dev.name}</Link> : <span className="muted">—</span>}</td>
-                      <td className="topics">
-                        {v.stateTopic && <div title="State topic (device publishes)"><span className="dir-mini">↓</span><code>{v.stateTopic}</code></div>}
-                        {v.commandTopic && <div title="Command topic (dashboard publishes)"><span className="dir-mini">↑</span><code>{v.commandTopic}</code></div>}
-                      </td>
+                      {details && (
+                        <td className="topics">
+                          {v.stateTopic && <div title="State topic (device publishes)"><span className="dir-mini">↓</span><code>{v.stateTopic}</code></div>}
+                          {v.commandTopic && <div title="Command topic (dashboard publishes)"><span className="dir-mini">↑</span><code>{v.commandTopic}</code></div>}
+                        </td>
+                      )}
                       <td><span className={cn('dir-pill sm', `dir-${v.direction}`)}>{DIRECTION_META[v.direction].arrow} {DIRECTION_META[v.direction].label}</span></td>
                       <td className="tabnum">
                         {entries[i] ? (
@@ -401,8 +381,8 @@ function VariablesTab({ project }: { project: Project }) {
                           </>
                         ) : '—'}
                       </td>
-                      <td className="muted small">{entries[i] ? timeAgo(entries[i].at, now) : '—'}</td>
-                      <td className="tabnum">{n}</td>
+                      {details && <td className="muted small">{entries[i] ? timeAgo(entries[i].at, now) : '—'}</td>}
+                      {details && <td className="tabnum">{n}</td>}
                       <td><span className={cn('state', `state-${st.tone}`)}><i />{st.label}</span></td>
                       <td className="row-actions">
                         <Menu items={[
@@ -522,6 +502,7 @@ function SettingsTab({ project }: { project: Project }) {
   const dashboards = useStudio((s) => s.dashboards.filter((d) => d.projectId === project.id));
   const varCount = useStudio((s) => s.variables.filter((v) => v.projectId === project.id).length);
   const interval = useStudio((s) => s.preferences.simIntervalMs);
+  const brokerMode = useRuntime((s) => s.status?.mode === 'broker');
   const [name, setName] = useState(project.name);
   const [description, setDescription] = useState(project.description);
   const [nameErr, setNameErr] = useState('');
@@ -579,26 +560,26 @@ function SettingsTab({ project }: { project: Project }) {
         </div>
       </Panel>
 
-      <Panel kicker="DEVICES & VARIABLES" title="Connections">
+      <Panel kicker="BOARDS" title="Boards in this project">
         <div className="check-list">
           {devices.map((d) => (
             <label key={d.id} className="check">
               <input type="checkbox" checked={project.deviceIds.includes(d.id)} onChange={(e) => setProjectDevice(project.id, d.id, e.target.checked)} />
-              {d.name} <code className="muted">{d.hardwareId}</code> {d.simulated ? <SimTag compact /> : <Badge tone="info">LMS</Badge>}
+              {d.name} {d.simulated && <SimTag compact />}
             </label>
           ))}
         </div>
         <p className="muted small">{varCount} variables · <Link to={`/projects/${project.id}/variables`}>Manage variables</Link></p>
       </Panel>
 
-      <Panel kicker="DEMO MODE" title="Simulation">
+      {!brokerMode && <Panel kicker="DEMO MODE" title="Simulation">
         <p className="muted small">The simulation is shared by the whole workspace. Pause it or simulate disconnects from the header status or a device’s page.</p>
         <Field label="Telemetry interval" htmlFor="st-interval">
           <select id="st-interval" className="input" value={interval} disabled>
-            <option value={interval}>{interval / 1000} s (change from the BROKER status in the header)</option>
+            <option value={interval}>{interval / 1000} s (change from the status in the header)</option>
           </select>
         </Field>
-      </Panel>
+      </Panel>}
 
       <Panel kicker="DATA" title="Export & import">
         <p className="muted small">Export saves this project’s dashboards, widgets and variables as JSON. Import creates a new project from such a file.</p>

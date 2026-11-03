@@ -8,23 +8,42 @@ import { checkCompatibility, getWidgetDef } from './definitions';
 import { useBoundValue, useNow, type BoundValue } from './hooks';
 import { WidgetRenderer } from './renderers';
 
+/** The backend's reasons, said the way a student can act on them. */
+export function whyFailed(reason: string | undefined, key: string | undefined): string {
+  const k = key ? `“${key}”` : 'this variable';
+  if (!reason) return `${k} isn’t working: the board didn’t answer.`;
+  if (/No acknowledgement from the device/i.test(reason)) return `${k} isn’t working: the board didn’t answer. Is it online, with a “When IoT command received” block for ${k}?`;
+  if (/^Device: unknown variable/i.test(reason)) return `${k} isn’t working: the board’s program doesn’t declare it. Add a “Declare IoT variable” block for ${k} and flash again.`;
+  if (/^Device: /i.test(reason)) return `${k} isn’t working: the board said “${reason.slice(8)}”.`;
+  return `${k} isn’t working: ${reason}`;
+}
+
 function StatusStrip({ bound, edit, io }: { bound: BoundValue; edit: boolean; io: string }) {
   const now = useNow();
   if (io === 'none') return null;
   const c = bound.command;
-  // Command feedback takes priority for controls.
-  if (io === 'write' && c && now - c.at < 15000) {
-    if (c.status === 'pending') return <div className="w-strip is-pending"><span className="spinner" /> Sent {JSON.stringify(c.value)} · waiting for ack</div>;
-    if (c.status === 'acknowledged') return <div className="w-strip is-ok"><Icon name="LuCheck" size={12} /> Device ack · {Math.max(0, (c.ackAt ?? c.at) - c.at)} ms {bound.device?.simulated && <span className="sim-tag">SIM</span>}</div>;
-    return <div className="w-strip is-bad"><Icon name="LuCircleAlert" size={12} /> {c.reason ?? 'Command failed'}</div>;
+  const key = bound.variable?.key;
+  // What happened to the last send comes first for controls. A failure stays until the next send.
+  if (io === 'write' && c) {
+    if (c.status === 'pending') return <div className="w-strip is-pending"><span className="spinner" /> Sending {JSON.stringify(c.value)}…</div>;
+    if (c.status === 'failed') return <div className="w-strip is-bad" title={whyFailed(c.reason, key)}><Icon name="LuCircleAlert" size={12} /> {whyFailed(c.reason, key)}</div>;
+    if (now - c.at < 15000) return <div className="w-strip is-ok"><Icon name="LuCheck" size={12} /> Board got {JSON.stringify(c.value)} · {Math.max(0, (c.ackAt ?? c.at) - c.at)} ms {bound.device?.simulated && <span className="sim-tag">SIM</span>}</div>;
   }
   switch (bound.status) {
     case 'unbound':
-      return <div className="w-strip is-unbound"><Icon name="LuLink" size={12} /> {edit ? 'Not bound — select to choose a variable' : 'Not bound to a variable'}</div>;
+      return <div className="w-strip is-unbound"><Icon name="LuLink" size={12} /> {edit ? 'Not connected — pick a variable in Data' : 'Not connected to a variable'}</div>;
     case 'missing':
-      return <div className="w-strip is-bad"><Icon name="LuCircleAlert" size={12} /> Bound variable was deleted</div>;
+      return <div className="w-strip is-bad"><Icon name="LuCircleAlert" size={12} /> Its variable was deleted</div>;
     case 'waiting':
-      return <div className="w-strip is-wait"><span className="pulse-dot" /> Waiting for data</div>;
+      return <div className="w-strip is-wait"><span className="pulse-dot" /> Waiting for the board to send {key ? `“${key}”` : 'a value'}</div>;
+    case 'ready':
+      return <div className="w-strip is-info"><Icon name="LuSend" size={12} /> {edit ? `Sends “${key}” to the board — try it in Preview` : `Sends “${key}” to the board`}</div>;
+    case 'sending':
+      return <div className="w-strip is-pending"><span className="spinner" /> Sending…</div>;
+    case 'sent':
+      return <div className="w-strip is-ok"><Icon name="LuCheck" size={12} /> Board got it · {timeAgo(bound.at, now)}</div>;
+    case 'failed':
+      return <div className="w-strip is-bad" title={whyFailed(c?.reason, key)}><Icon name="LuCircleAlert" size={12} /> {whyFailed(c?.reason, key)}</div>;
     case 'offline':
       return <div className="w-strip is-bad"><Icon name="LuWifiOff" size={12} /> Device offline · last value {timeAgo(bound.at, now)}</div>;
     case 'real-hw':
@@ -61,7 +80,7 @@ export function WidgetFrame(props: {
     void sendCommand(v, value, { projectId, source: `${projectName} › ${widget.config.title}` });
   };
 
-  const live = bound.status === 'live';
+  const live = bound.status === 'live' || bound.status === 'sent';
   return (
     <div
       className={cn(

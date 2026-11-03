@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import {
-  LuActivity, LuArrowDownLeft, LuArrowLeft, LuArrowRight, LuArrowUpRight, LuBell, LuBot, LuBox, LuCheck, LuChevronDown,
+  LuActivity, LuArrowDownLeft, LuArrowLeft, LuSend, LuArrowRight, LuArrowUpRight, LuBell, LuBot, LuBox, LuCheck, LuChevronDown,
   LuChevronRight, LuChartArea, LuChartColumn, LuChartLine, LuCircleAlert, LuCircleCheck, LuCircleDashed, LuCircleDot,
   LuCloudSun, LuCog, LuCopy, LuCpu, LuDisc, LuDownload, LuEllipsis, LuExternalLink, LuEye, LuFileJson, LuFlame,
   LuFolderOpen, LuGauge, LuGraduationCap, LuGripVertical, LuHash, LuHeading, LuHouse, LuInfo, LuLayers, LuLayoutDashboard,
@@ -13,7 +13,7 @@ import {
 } from 'react-icons/lu';
 
 const ICONS = {
-  LuActivity, LuArrowDownLeft, LuArrowLeft, LuArrowRight, LuArrowUpRight, LuBell, LuBot, LuBox, LuCheck, LuChevronDown,
+  LuActivity, LuArrowDownLeft, LuArrowLeft, LuSend, LuArrowRight, LuArrowUpRight, LuBell, LuBot, LuBox, LuCheck, LuChevronDown,
   LuChevronRight, LuChartArea, LuChartColumn, LuChartLine, LuCircleAlert, LuCircleCheck, LuCircleDashed, LuCircleDot,
   LuCloudSun, LuCog, LuCopy, LuCpu, LuDisc, LuDownload, LuEllipsis, LuExternalLink, LuEye, LuFileJson, LuFlame,
   LuFolderOpen, LuGauge, LuGraduationCap, LuGripVertical, LuHash, LuHeading, LuHouse, LuInfo, LuLayers, LuLayoutDashboard,

@@ -9,7 +9,8 @@ const clock = createStore({ now: Date.now() });
 setInterval(() => clock.set({ now: Date.now() }), 5000);
 export const useNow = () => useStore(clock, (s) => s.now);
 
-export type ValueStatus = 'unbound' | 'missing' | 'waiting' | 'live' | 'offline' | 'real-hw';
+/** ready / sending / sent / failed are for variables the dashboard sends to the board (no reading of their own). */
+export type ValueStatus = 'unbound' | 'missing' | 'waiting' | 'live' | 'offline' | 'real-hw' | 'ready' | 'sending' | 'sent' | 'failed';
 
 export interface BoundValue {
   variable: Variable | null;
@@ -32,20 +33,30 @@ export function useBoundValue(widget: Widget): BoundValue {
   // Real boards only go unheard while the server runs without a broker (demo mode)
   const brokerMode = useRuntime((s) => s.status?.mode === 'broker');
 
+  // "IoT Studio → board" variables have no reading: the board only acknowledges, so what we sent is the value
+  const sendsOnly = Boolean(variable && !variable.stateTopic && variable.commandTopic);
+
   let status: ValueStatus;
   if (!widget.binding) status = 'unbound';
   else if (!variable) status = 'missing';
   else if (device && !device.simulated && !brokerMode) status = 'real-hw';
   else if (deviceState && ['disconnected', 'error', 'auth_required'].includes(deviceState)) status = 'offline';
-  else if (!entry) status = 'waiting';
-  else status = 'live';
+  else if (entry) status = 'live';
+  else if (command) status = command.status === 'pending' ? 'sending' : command.status === 'failed' ? 'failed' : 'sent';
+  else if (sendsOnly) status = 'ready';
+  else status = 'waiting';
 
   let value = entry?.value;
+  let at = entry?.at ?? null;
+  if (!entry && command && command.status !== 'failed') {
+    value = command.value;
+    at = command.at;
+  }
   const b = widget.binding;
   if (b && typeof value === 'number' && (b.scale !== undefined || b.offset !== undefined)) {
     value = value * (b.scale ?? 1) + (b.offset ?? 0);
   }
-  return { variable, device, topic, value, at: entry?.at ?? null, status, deviceState, command };
+  return { variable, device, topic, value, at, status, deviceState, command };
 }
 
 export function useHistory(topic: string | null, windowSec?: number, max?: number): TelemetrySample[] {
