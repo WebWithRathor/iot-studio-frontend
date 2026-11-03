@@ -7,6 +7,7 @@ import { hasUnsavedChanges, resetDemoData, useStudio } from '../../state/studio'
 import { confirmDialog, toast } from '../../state/ui';
 import { errorMessage } from '../../services/api/client';
 import { cn } from '../../utils';
+import { BrandLogo } from '../BrandLogo';
 import { Icon } from '../Icon';
 import { PlanBadge, TokenMeter, TokenPill } from '../tokens';
 import { Badge, Button, More, StateBadge, Switch } from '../ui';
@@ -137,7 +138,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       <header className="topbar">
         <div className="topbar-in">
           <div className="brand">
-            <Link to="/" className="logo" title="Kokoon IoT Studio">KOKOON<span>.</span></Link>
+            <BrandLogo to="/" />
+            <span className="logo-app">IoT Studio</span>
           </div>
           <nav className="topnav" aria-label="Main">
             {NAV.map((n) => (

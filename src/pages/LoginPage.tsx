@@ -1,3 +1,4 @@
+import { BrandLogo } from '../components/BrandLogo';
 import { useState } from 'react';
 import { Icon } from '../components/Icon';
 import { Button, Field } from '../components/ui';
@@ -57,7 +58,7 @@ export function LoginPage() {
   return (
     <div className="auth-page">
       <header className="auth-top">
-        <span className="logo">KOKOON<span>.</span></span>
+        <BrandLogo />
         <span className="sysver">IOT_STUDIO: {config.appVersion}</span>
       </header>
       <main className="auth-main" id="main">
