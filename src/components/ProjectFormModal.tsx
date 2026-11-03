@@ -4,6 +4,7 @@ import { errorMessage } from '../services/api/client';
 import type { LmsProgramSummary } from '../services/integrations';
 import { formatTokens } from '../lib/tokens';
 import { ACCENTS, CATEGORIES, createProject, updateProject, useStudio, useTokenBudget } from '../state/studio';
+import { useTokensEnabled } from '../state/auth';
 import { toast } from '../state/ui';
 import type { Project } from '../types/models';
 import { cn } from '../utils';
@@ -14,6 +15,7 @@ export function ProjectFormModal(props: { open: boolean; onClose: () => void; pr
   const editing = Boolean(props.project);
   const devices = useStudio((s) => s.devices);
   const budget = useTokenBudget();
+  const tokensOn = useTokensEnabled();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('Smart Home');
@@ -158,7 +160,7 @@ export function ProjectFormModal(props: { open: boolean; onClose: () => void; pr
         {editing ? extras : <More label="More options">{extras}</More>}
         <button type="submit" hidden />
       </form>
-      {!editing && (
+      {!editing && tokensOn && (
         <p className="modal-foot-note">
           <Icon name="LuCoins" size={13} /> Uses {formatTokens(budget.costs.project)} of your {formatTokens(budget.available)} tokens.
         </p>

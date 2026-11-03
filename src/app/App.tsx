@@ -4,7 +4,7 @@ import { AdminPage } from '../pages/AdminPage';
 import { PaymentsPage } from '../pages/PaymentsPage';
 import { PlanPage } from '../pages/PlanPage';
 import { Button, ConfirmHost, EmptyState, ToastHost } from '../components/ui';
-import { Link, matchPath, useLocation } from '../lib/router';
+import { Link, matchPath, Redirect, useLocation } from '../lib/router';
 import { ConsolePage } from '../pages/ConsolePage';
 import { DeviceDetailPage, DevicesPage } from '../pages/DevicePages';
 import { EditorPage } from '../pages/EditorPage';
@@ -12,12 +12,13 @@ import { HomePage } from '../pages/HomePage';
 import { LoginPage } from '../pages/LoginPage';
 import { ProjectLayout } from '../pages/ProjectPages';
 import { config } from '../services/config';
-import { bootstrapAuth, useAuth } from '../state/auth';
+import { bootstrapAuth, useAuth, useTokensEnabled } from '../state/auth';
 import { startRuntime } from '../state/runtime';
 import { initStudio, useStudio } from '../state/studio';
 
 function Routes() {
   const { path } = useLocation();
+  const tokensOn = useTokensEnabled();
   let m: Record<string, string> | null;
 
   if ((m = matchPath('/projects/:id/editor/:dash', path)) || (m = matchPath('/projects/:id/editor', path))) {
@@ -32,6 +33,7 @@ function Routes() {
   else if (path === '/devices') page = <DevicesPage />;
   else if ((m = matchPath('/devices/:id', path))) page = <DeviceDetailPage key={m.id} deviceId={m.id} />;
   else if (path === '/console') page = <ConsolePage />;
+  else if ((path === '/plan' || path === '/payments') && !tokensOn) return <Redirect to="/" />;
   else if (path === '/plan') page = <PlanPage />;
   else if (path === '/payments') page = <PaymentsPage />;
   else if (path === '/admin') page = <AdminPage />;

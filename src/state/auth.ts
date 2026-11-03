@@ -71,6 +71,15 @@ export async function signOut(): Promise<void> {
   }
 }
 
+/** Re-read the server switches (after an admin changed one). */
+export async function refreshConfig(): Promise<void> {
+  const config = await authApi.config();
+  auth.set({ config });
+}
+
+export const tokensEnabled = (): boolean => auth.get().config?.tokensEnabled ?? false;
+export const useTokensEnabled = (): boolean => useAuth((s) => s.config?.tokensEnabled ?? false);
+
 export const hasPermission = (p: string): boolean => auth.get().user?.permissions.includes(p) ?? false;
 export const useHasPermission = (p: string): boolean => useAuth((s) => s.user?.permissions.includes(p) ?? false);
 

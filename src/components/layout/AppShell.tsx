@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { config } from '../../services/config';
 import { Link, useLocation } from '../../lib/router';
-import { signOut, useAuth, useHasPermission } from '../../state/auth';
+import { signOut, useAuth, useHasPermission, useTokensEnabled } from '../../state/auth';
 import { setSimulationInterval, setSimulationPaused, useRuntime } from '../../state/runtime';
 import { hasUnsavedChanges, resetDemoData, useStudio } from '../../state/studio';
 import { confirmDialog, toast } from '../../state/ui';
@@ -93,6 +93,7 @@ function SimulationStatus() {
 function UserMenu() {
   const user = useAuth((s) => s.user);
   const plan = useStudio((s) => s.tokens?.plan ?? user?.plan ?? 'FREE');
+  const tokensOn = useTokensEnabled();
   if (!user) return null;
   return (
     <Popover label="Account" trigger={<span className="user"><Icon name="LuUser" size={15} /><span>{user.name.split(' ')[0].toUpperCase()}</span></span>}>
@@ -102,12 +103,14 @@ function UserMenu() {
         <span className="muted small">{user.email}</span>
         <span className="user-card-badges">
           <Badge tone={user.role === 'USER' ? 'neutral' : 'accent'}>{user.role.replace('_', ' ')}</Badge>
-          <PlanBadge plan={plan} />
+          {tokensOn && <PlanBadge plan={plan} />}
         </span>
       </div>
-      <TokenMeter compact />
-      <Link to="/plan" className="link-btn small">Plan &amp; tokens →</Link>
-      <Link to="/payments" className="link-btn small">Buy tokens · payments →</Link>
+      {tokensOn && (<>
+        <TokenMeter compact />
+        <Link to="/plan" className="link-btn small">Plan &amp; tokens →</Link>
+        <Link to="/payments" className="link-btn small">Buy tokens · payments →</Link>
+      </>)}
       <p className="muted small">Your session is kept in secure cookies and renewed automatically.</p>
       <Button size="sm" icon="LuLogOut" onClick={async () => {
         if (hasUnsavedChanges()) {
@@ -131,7 +134,8 @@ const ADMIN_NAV = { to: '/admin', label: 'Admin', icon: 'LuShieldCheck', match: 
 export function AppShell({ children }: { children: ReactNode }) {
   const { path } = useLocation();
   const isAdmin = useHasPermission('plans:manage');
-  const NAV = isAdmin ? [...BASE_NAV, ADMIN_NAV] : BASE_NAV;
+  const tokensOn = useTokensEnabled();
+  const NAV = [...BASE_NAV.filter((n) => tokensOn || n.to !== '/plan'), ...(isAdmin ? [ADMIN_NAV] : [])];
   return (
     <div className="shell">
       <a className="skip" href="#main">Skip to content</a>

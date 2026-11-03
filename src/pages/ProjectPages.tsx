@@ -8,6 +8,7 @@ import { DIRECTION_META, VariableForm } from '../components/VariableForm';
 import { config } from '../services/config';
 import { Link, navigate, Redirect } from '../lib/router';
 import { variableMapping } from '../services';
+import { useTokensEnabled } from '../state/auth';
 import { useRuntime } from '../state/runtime';
 import {
   ACCENTS, CATEGORIES, bindingCount, createDashboard, createVariable, deleteDashboard, deleteProject, deleteVariable, duplicateProject,
@@ -194,6 +195,7 @@ function DashboardsTab({ project }: { project: Project }) {
   const [newOpen, setNewOpen] = useState(false);
   const [newName, setNewName] = useState('');
   const budget = useTokenBudget();
+  const tokensOn = useTokensEnabled();
   const view = dashboards.find((d) => d.id === viewId) ?? dashboards[0];
   return (
     <div className="stack">
@@ -232,7 +234,7 @@ function DashboardsTab({ project }: { project: Project }) {
         footer={<><Button onClick={() => setNewOpen(false)}>Cancel</Button><Button variant="primary" onClick={async () => { const d = await createDashboard(project.id, newName); if (!d) return; setNewOpen(false); navigate(`/projects/${project.id}/editor/${d.id}?mode=edit`); }}>Create dashboard</Button></>}>
         <label className="field-label" htmlFor="pd-new-name">Name</label>
         <input id="pd-new-name" className="input" value={newName} placeholder="e.g. Debug view" onChange={(e) => setNewName(e.target.value)} />
-        <p className="muted small">Uses {budget.costs.dashboard} tokens · you have {budget.available.toLocaleString('en-IN')} left. Deleting it gives them back.</p>
+        {tokensOn && <p className="muted small">Uses {budget.costs.dashboard} tokens · you have {budget.available.toLocaleString('en-IN')} left. Deleting it gives them back.</p>}
       </Modal>
     </div>
   );

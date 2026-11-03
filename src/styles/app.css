@@ -1055,3 +1055,6 @@ body.is-dragging, body.is-dragging * { user-select: none; cursor: grabbing !impo
 :root[data-theme='dark'] .logo-dark { display: block; }
 .logo-app { font-family: var(--f-mono); font-size: 11px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); border-left: 1px solid var(--line); padding-left: 14px; white-space: nowrap; }
 @media (max-width: 560px) { .logo-app { display: none; } .logo-img { height: 26px; } }
+
+.admin-switch-row { display: flex; justify-content: space-between; align-items: center; gap: 20px; flex-wrap: wrap; }
+.admin-switch-row > div { max-width: 60ch; display: grid; gap: 4px; }

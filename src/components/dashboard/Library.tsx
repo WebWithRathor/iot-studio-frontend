@@ -75,7 +75,7 @@ export function Library({ onAdd, onClose, nextCost, affordable }: { onAdd: (type
                 }}
                 onDragEnd={() => { dragPayload.type = null; }}
                 onClick={() => onAdd(w.type)}
-                title={nextCost ? `Add ${w.name} — ${nextCost} tokens (or drag it onto the canvas)` : `Add ${w.name} — free sample slot (or drag it onto the canvas)`}
+                title={nextCost ? `Add ${w.name} — ${nextCost} tokens (or drag it onto the canvas)` : `Add ${w.name} (or drag it onto the canvas)`}
               >
                 <span className={cn('lib-icon', `cat-${w.category}`)}><Icon name={w.icon} size={18} /></span>
                 <span className="lib-text">
@@ -94,7 +94,7 @@ export function Library({ onAdd, onClose, nextCost, affordable }: { onAdd: (type
           </button>
         )}
       </div>
-      <p className="lib-foot">Click to add, or drag onto the canvas. {nextCost ? `Each widget uses ${nextCost} tokens; deleting gives them back.` : 'This one is free.'}</p>
+      <p className="lib-foot">Click to add, or drag onto the canvas.{nextCost ? ` Each widget uses ${nextCost} tokens; deleting gives them back.` : ''}</p>
     </aside>
   );
 }

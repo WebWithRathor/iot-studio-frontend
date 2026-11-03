@@ -7,6 +7,7 @@ import { PropertiesPanel, type PanelChange } from '../components/dashboard/Prope
 import { Icon } from '../components/Icon';
 import { Badge, Button, IconButton, Menu, Modal, Segmented, StateBadge } from '../components/ui';
 import { Link, navigate, Redirect, useLocation } from '../lib/router';
+import { useTokensEnabled } from '../state/auth';
 import { useRuntime } from '../state/runtime';
 import { TokenPill } from '../components/tokens';
 import {
@@ -70,7 +71,8 @@ export function EditorPage({ projectId, dashboardId }: { projectId: string; dash
   const widgets = dashboard?.widgets ?? [];
   const selected = widgets.find((w) => w.id === selectedId) ?? null;
   const budget = useTokenBudget();
-  const nextCost = dashboard && widgets.length < (dashboard.freeWidgets ?? 0) ? 0 : budget.costs.widget;
+  const tokensOn = useTokensEnabled();
+  const nextCost = !tokensOn || (dashboard && widgets.length < (dashboard.freeWidgets ?? 0)) ? 0 : budget.costs.widget;
   const dense = project?.settings.density === 'compact';
   const rowHeight = dense ? 46 : 56;
   const gap = dense ? 8 : 12;
@@ -389,7 +391,7 @@ export function EditorPage({ projectId, dashboardId }: { projectId: string; dash
       >
         <label className="field-label" htmlFor="new-dash-name">Name</label>
         <input id="new-dash-name" className="input" value={newDashName} placeholder="e.g. Debug view" onChange={(e) => setNewDashName(e.target.value)} />
-        <p className="muted small">Uses {budget.costs.dashboard} tokens · you have {budget.available.toLocaleString('en-IN')} left.</p>
+        {tokensOn && <p className="muted small">Uses {budget.costs.dashboard} tokens · you have {budget.available.toLocaleString('en-IN')} left.</p>}
       </Modal>
     </div>
   );

@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Icon } from '../components/Icon';
 import { PlanBadge } from '../components/tokens';
-import { Badge, Button, EmptyState, Field, PageHeader, Tabs } from '../components/ui';
+import { Badge, Button, EmptyState, Field, PageHeader, Switch, Tabs } from '../components/ui';
 import { formatTokens } from '../lib/tokens';
 import { errorMessage } from '../services/api/client';
 import { adminApi, type KitCode, type ManagedUser } from '../services/api/endpoints';
-import { useAuth, useHasPermission } from '../state/auth';
+import { refreshConfig, useAuth, useHasPermission, useTokensEnabled } from '../state/auth';
 import { refreshTokens } from '../state/studio';
 import { toast } from '../state/ui';
 import { PLAN_LABELS, type Plan } from '../types/models';
@@ -165,6 +165,36 @@ function KitCodesTab() {
   );
 }
 
+/** The switches: one click, applies to everyone. */
+function SettingsCard() {
+  const on = useTokensEnabled();
+  const [busy, setBusy] = useState(false);
+  const flip = async (next: boolean) => {
+    setBusy(true);
+    try {
+      await adminApi.updateSettings({ tokensEnabled: next });
+      await refreshConfig();
+      toast(next ? 'Tokens are on: plans, costs and kit codes are back for everyone.' : 'Tokens are off: nothing is charged and students see no token elements.', 'success');
+    } catch (err) {
+      toast(errorMessage(err), 'error');
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <section className="panel-card cut-frame admin-settings">
+      <div className="kicker kicker-accent">// SWITCHES</div>
+      <div className="admin-switch-row">
+        <div>
+          <strong>Token system</strong>
+          <p className="muted small">Plans, token costs, kit codes and the Plan page. Off: nothing is charged and no token elements are shown. Students pick it up on their next page load.</p>
+        </div>
+        <Switch checked={on} label={busy ? 'Saving…' : on ? 'On' : 'Off'} onChange={(b) => void flip(b)} />
+      </div>
+    </section>
+  );
+}
+
 export function AdminPage() {
   const allowed = useHasPermission('plans:manage');
   const [tab, setTab] = useState<'users' | 'kits'>('users');
@@ -180,6 +210,7 @@ export function AdminPage() {
       <PageHeader kicker="ADMINISTRATION" title="Plans" serif="& kit codes">
         Give customers Premium, grant bonus tokens, and generate the activation codes that ship in kit boxes.
       </PageHeader>
+      <SettingsCard />
       <Tabs value={tab} onChange={setTab} tabs={[{ value: 'users', label: 'Users & plans' }, { value: 'kits', label: 'Kit codes' }]} />
       {tab === 'users' ? <UsersTab /> : <KitCodesTab />}
     </main>

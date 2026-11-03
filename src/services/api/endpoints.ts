@@ -10,6 +10,8 @@ import { del, get, patch, post, put, qs } from './client';
 
 export interface AuthConfig {
   registrationEnabled: boolean;
+  /** The token budget (plans, costs, kit codes). Off = nothing is charged and no token UI. An admin flips it. */
+  tokensEnabled: boolean;
   demoWorkspaceOnSignup: boolean;
   mqttMode: 'simulated' | 'broker';
   /** "Sign in with Kokoon LMS" — startUrl is the LMS page that signs the student in and posts back. */
@@ -156,7 +158,13 @@ export const paymentApi = {
 };
 
 /** Private (admin) API — the server enforces the role; the UI only hides what the user cannot use. */
+export interface AppSettings {
+  tokensEnabled: boolean;
+}
+
 export const adminApi = {
+  settings: () => get<AppSettings>('/admin/settings'),
+  updateSettings: (input: Partial<AppSettings>) => patch<AppSettings>('/admin/settings', input),
   setSimulation: (input: { paused?: boolean; intervalMs?: number }) => patch<MqttStatus>('/admin/mqtt/simulation', input),
   users: (q: { q?: string; page?: number; pageSize?: number } = {}) => get<Page<ManagedUser>>(`/admin/users${qs({ ...q, sort: '-createdAt' })}`),
   user: (id: ID) => get<ManagedUser>(`/admin/users/${id}`),

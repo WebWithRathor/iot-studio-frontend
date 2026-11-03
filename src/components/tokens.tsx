@@ -1,6 +1,7 @@
 import { formatTokens } from '../lib/tokens';
 import { navigate } from '../lib/router';
 import { useTokenBudget } from '../state/studio';
+import { useTokensEnabled } from '../state/auth';
 import { closeTokenPrompt, useUi } from '../state/ui';
 import { cn } from '../utils';
 import { Icon } from './Icon';
@@ -23,7 +24,8 @@ export function PlanBadge({ plan }: { plan: string }) {
 /** Top-bar pill: tokens left, links to the plan page. */
 export function TokenPill() {
   const b = useTokenBudget();
-  if (!b.known) return null;
+  const on = useTokensEnabled();
+  if (!on || !b.known) return null;
   const s = share(b.used, b.allowance);
   return (
     <button type="button" className={cn('token-pill', tone(s))} onClick={() => navigate('/plan')} title={`${formatTokens(b.used)} of ${formatTokens(b.allowance)} tokens used — open Plan & tokens`}>
@@ -38,7 +40,8 @@ export function TokenPill() {
 /** Horizontal meter with used / allowance. `pending` previews a cost (e.g. hovering a component). */
 export function TokenMeter({ compact, pending = 0 }: { compact?: boolean; pending?: number }) {
   const b = useTokenBudget();
-  if (!b.known) return null;
+  const on = useTokensEnabled();
+  if (!on || !b.known) return null;
   const s = share(b.used, b.allowance);
   const p = share(Math.min(b.allowance, b.used + pending), b.allowance) - s;
   return (
@@ -68,7 +71,8 @@ export function CostTag({ cost, affordable = true, free }: { cost: number; affor
 export function TokenPromptHost() {
   const p = useUi((s) => s.tokenPrompt);
   const b = useTokenBudget();
-  if (!p) return null;
+  const on = useTokensEnabled();
+  if (!p || !on) return null;
   const premium = b.plan === 'PREMIUM';
   return (
     <Modal

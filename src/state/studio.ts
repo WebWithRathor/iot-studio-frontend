@@ -4,7 +4,7 @@ import { ApiError, errorMessage } from '../services/api/client';
 import { dashboardApi, deviceApi, projectApi, userApi, variableApi, type ProjectGraph, type VariablePayload } from '../services/api/endpoints';
 import { sandboxPrefix, suggestTopics, validateTopic } from '../services/mqtt/topics';
 import type { ActivityEvent, Dashboard, DataType, Device, Direction, ID, LmsProgramRef, Project, ProjectSettings, StudioData, TokenState, Variable, Widget } from '../types/models';
-import { auth } from './auth';
+import { auth, tokensEnabled } from './auth';
 import { showTokenPrompt, toast } from './ui';
 
 /**
@@ -115,7 +115,7 @@ export function useTokenBudget() {
 
 /** True when `cost` more tokens fit; otherwise opens the "not enough tokens" prompt and returns false. */
 export function ensureTokens(cost: number, action: string): boolean {
-  if (cost <= 0) return true;
+  if (cost <= 0 || !tokensEnabled()) return true;
   const b = tokenBudget();
   if (b.used + cost <= b.allowance) return true;
   showTokenPrompt({ action, needed: cost, available: b.available });
