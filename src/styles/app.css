@@ -761,6 +761,9 @@ body.is-dragging, body.is-dragging * { user-select: none; cursor: grabbing !impo
 .var-opt-why { grid-column: 1 / -1; font-size: 12px; color: var(--muted); }
 .var-opt-why.warn { color: var(--warn); }
 .var-opt-why.error { color: var(--bad); }
+.var-pick li.has-del { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 6px; align-items: stretch; }
+.var-pick .var-del { height: auto; align-self: stretch; border-color: var(--line); background: var(--surface); color: var(--muted); }
+.var-pick .var-del:hover:not(:disabled) { color: var(--bad); }
 
 @media (max-width: 960px) {
   .editor-body, .editor-body.lib-open, .editor-body.props-open, .editor-body.lib-open.props-open { grid-template-columns: 1fr; }

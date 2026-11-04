@@ -1,14 +1,15 @@
 import { useState } from 'react';
 import { variableMapping } from '../../services';
 import { sendCommand, useRuntime } from '../../state/runtime';
-import { createVariable, importDeviceVariable, useStudio } from '../../state/studio';
+import { bindingCount, createVariable, deleteVariable, importDeviceVariable, useStudio } from '../../state/studio';
+import { confirmDialog } from '../../state/ui';
 import type { Binding, DataType, ID, Variable, Widget } from '../../types/models';
 import { cn, formatValue, timeAgo } from '../../utils';
 import { checkCompatibility, dataTypeLabel, getWidgetDef } from '../../widgets/definitions';
 import { useNow } from '../../widgets/hooks';
 import { whyFailed } from '../../widgets/WidgetFrame';
 import { Icon } from '../Icon';
-import { Badge, Button, Field, More } from '../ui';
+import { Badge, Button, Field, IconButton, More } from '../ui';
 import { DIRECTION_META, VariableForm } from '../VariableForm';
 
 /**
@@ -104,6 +105,16 @@ export function BindingPanel({ widget, projectId, onBind }: { widget: Widget; pr
     .sort((a, b) => Number(a.compat.level === 'error') - Number(b.compat.level === 'error'));
   const isNumericRead = def.io === 'read' && bound && (bound.dataType === 'integer' || bound.dataType === 'float');
 
+  const removeVariable = async (v: Variable) => {
+    const n = bindingCount(v.id);
+    const used = n ? `${n} widget${n > 1 ? 's use' : ' uses'} it and will be unbound.` : 'No widgets use it.';
+    const lms = v.firmwareRef && v.firmwareRef.declared !== false
+      ? ' Your LMS program still declares it, so the board keeps offering it here (and the next Run or Upload adds it back). To remove it for good, delete its “Declare IoT variable” block in the LMS.'
+      : '';
+    const name = v.displayName.toLowerCase() === v.key.toLowerCase() ? v.displayName : `${v.displayName} (${v.key})`;
+    if (await confirmDialog({ title: `Delete ${name}?`, message: used + lms, confirmLabel: 'Delete variable', danger: true })) await deleteVariable(v.id);
+  };
+
   return (
     <div className="bind">
       <p className="bind-what">
@@ -166,13 +177,13 @@ export function BindingPanel({ widget, projectId, onBind }: { widget: Widget; pr
           )}
           <ul className="var-pick" role="listbox" aria-label="Variables">
             {options.map((o) => (
-              <li key={o.id}>
+              <li key={o.id} className={cn(!o.add && 'has-del')}>
                 <button
                   type="button"
                   role="option"
                   aria-selected={false}
                   disabled={o.compat.level === 'error'}
-                  className={cn('var-opt', o.compat.level === 'error' && 'is-incompatible')}
+                  className={cn('var-opt', o.compat.level === 'error' && 'is-incompatible', o.add && 'is-available')}
                   title={o.compat.reason}
                   onClick={async () => {
                     if (!o.add) return onBind({ variableId: o.v.id }, o.v);
@@ -189,7 +200,9 @@ export function BindingPanel({ widget, projectId, onBind }: { widget: Widget; pr
                     <span className="dir-mini" title={DIRECTION_META[o.v.direction].label}>{DIRECTION_META[o.v.direction].arrow}</span>
                   </span>
                   {o.compat.level !== 'ok' && <span className={cn('var-opt-why', o.compat.level)}>{o.compat.reason}</span>}
+                  {o.add && o.compat.level !== 'error' && <span className="var-opt-why">Declared by {o.device?.name ?? 'the board'}, not in this project yet: picking it adds it.</span>}
                 </button>
+                {!o.add && <IconButton icon="LuTrash2" label={`Delete ${o.v.key}`} className="var-del" onClick={() => void removeVariable(o.v)} />}
               </li>
             ))}
           </ul>

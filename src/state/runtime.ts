@@ -4,7 +4,7 @@ import { adminApi, deviceApi, mqttApi } from '../services/api/endpoints';
 import type { ActivityEvent, CommandState, ConnectionState, DeviceRuntime, ID, MqttMessage, MqttStatus, SimMode, TelemetrySample, Variable } from '../types/models';
 import { decodePayload, toNumber } from '../utils';
 import { hasPermission } from './auth';
-import { receiveActivity, reloadWorkspace } from './studio';
+import { applyLmsSync, receiveActivity, reloadWorkspace } from './studio';
 import { toast } from './ui';
 
 export type { CommandState, DeviceRuntime } from '../types/models';
@@ -132,6 +132,8 @@ function openStream() {
   on<ActivityEvent>(source, 'activity', receiveActivity);
   on<MqttStatus>(source, 'status', (st) => runtime.set({ status: st, simPaused: st.simulation.paused }));
   on<{ reason: string }>(source, 'workspace', () => void reloadWorkspace().catch(() => undefined));
+  // The LMS re-synced a board's declared variables (Run / Upload there): refresh them here right away
+  on<{ deviceId: ID; projectId: ID | null; removedVariableIds: ID[] }>(source, 'lms_sync', (e) => void applyLmsSync(e).catch(() => undefined));
   on<{ reason: string }>(source, 'reauth', () => {
     // The server closes the stream when the access token is about to expire; refresh, then reconnect.
     source.close();

@@ -554,11 +554,58 @@ export async function deleteVariable(id: ID): Promise<boolean> {
   }
   studio.set((s) => ({
     variables: s.variables.filter((x) => x.id !== id),
-    dashboards: s.dashboards.map((d) =>
-      d.widgets.some((w) => w.binding?.variableId === id) ? { ...d, revision: d.revision + 1, widgets: d.widgets.map((w) => (w.binding?.variableId === id ? { ...w, binding: null } : w)) } : d,
-    ),
+    dashboards: unbindLocally(s.dashboards, [id]),
   }));
   return true;
+}
+
+/** Mirror the server unbinding these variables from widgets (it bumps each touched dashboard's revision once per variable). */
+const unbindLocally = (dashboards: Dashboard[], ids: ID[]) =>
+  ids.reduce(
+    (ds, id) =>
+      ds.map((d) =>
+        d.widgets.some((w) => w.binding?.variableId === id) ? { ...d, revision: d.revision + 1, widgets: d.widgets.map((w) => (w.binding?.variableId === id ? { ...w, binding: null } : w)) } : d,
+      ),
+    dashboards,
+  );
+
+let lmsSyncRun: Promise<void> | null = null;
+let lmsSyncAgain = false;
+
+/**
+ * The LMS re-synced a board (Run / Upload in the block editor): take the server's
+ * devices, projects and variables now, so an open dashboard shows the new
+ * declarations (direction, type, renamed or removed keys) without a reload.
+ * Dashboards are kept as edited here (unsaved edits survive); only the widgets
+ * bound to removed variables are unbound, as the server did.
+ */
+export function applyLmsSync(e: { removedVariableIds: ID[] }): Promise<void> {
+  if (e.removedVariableIds.length) studio.set((s) => ({ dashboards: unbindLocally(s.dashboards, e.removedVariableIds) }));
+  if (lmsSyncRun) {
+    lmsSyncAgain = true; // a burst of syncs: one more fetch after the current one
+    return lmsSyncRun;
+  }
+  lmsSyncRun = (async () => {
+    try {
+      do {
+        lmsSyncAgain = false;
+        const w = await userApi.workspace();
+        studio.set((s) => {
+          const known = new Set(s.projects.map((p) => p.id));
+          return {
+            devices: w.devices,
+            projects: w.projects,
+            variables: w.variables,
+            // A project the LMS just created comes with its dashboards
+            dashboards: [...s.dashboards.filter((d) => w.projects.some((p) => p.id === d.projectId)), ...w.dashboards.filter((d) => !known.has(d.projectId))],
+          };
+        });
+      } while (lmsSyncAgain);
+    } finally {
+      lmsSyncRun = null;
+    }
+  })();
+  return lmsSyncRun;
 }
 
 export async function importDeviceVariable(projectId: ID, deviceId: ID, key: string): Promise<Variable | null> {
